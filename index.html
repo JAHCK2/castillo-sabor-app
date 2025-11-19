@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v25</title>
+<title>EL CASTILLO DEL SABOR 🏰 v26</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -78,7 +78,7 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1>
-                <p class="text-xs text-indigo-500 font-medium">v25 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+                <p class="text-xs text-indigo-500 font-medium">v26 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
             </div>
             <div id="auth-status" class="text-right flex items-center gap-2">
                 <!-- ID Maestra Visible (Mostrará el ID solo si existe) -->
@@ -368,12 +368,18 @@ async function init(){
     if(!Object.keys(firebaseConfig).length) return;
     const app=initializeApp(firebaseConfig); db=getFirestore(app); auth=getAuth(app);
     
-    // Función para mostrar el mensaje de error de ID (V25)
+    // Función para mostrar el mensaje de error de ID (V26)
     function showIdError(id) {
-        document.querySelectorAll('#cierre-form, .nav-btn:not(#goto-bitacora-btn)').forEach(e => e.style.display = 'none');
+        // Esconder el contenido de la caja (bitácora)
+        document.getElementById('cierre-form').classList.add('hidden');
+        document.getElementById('historial-lista').classList.add('hidden');
+
+        // Mostrar el mensaje de error de emergencia
         document.getElementById('id-emergency-message').classList.remove('hidden');
         document.getElementById('emergency-id-display').textContent = id || 'Error: ID no generada';
+        
         document.getElementById('emergency-id-reset-btn').onclick = () => {
+            // Borrar la clave para forzar la recarga y una nueva sesión limpia
             localStorage.removeItem(MASTER_KEY);
             location.reload();
         };
@@ -381,33 +387,35 @@ async function init(){
 
     onAuthStateChanged(auth,u=>{
         if(u){
-            activeId=localStorage.getItem(MASTER_KEY)||u.uid;
+            activeId=localStorage.getItem(MASTER_KEY);
             
-            // Si la ID existe en local o en Firebase, muestra la App normalmente
-            if (activeId && activeId !== u.uid) { 
-                $('user-id-full').textContent=activeId; 
-                $('sync-status-msg').classList.remove('hidden');
-                
-                // Esconde el mensaje de error y muestra la App
-                document.getElementById('id-emergency-message').classList.add('hidden');
-                document.querySelectorAll('#cierre-form, .nav-btn:not(#goto-bitacora-btn)').forEach(e => e.style.display = '');
-
-                const path=`artifacts/${appId}/users/${activeId}`;
-                colCierres=collection(db,`${path}/cierres_v2`); colProd=collection(db,`${path}/productos`);
-                colEmp=collection(db,`${path}/empleados`); colGen=collection(db,`${path}/gastos_gen`);
-                setupSubs();
-            } else if (u.uid) {
-                // Si Firebase generó una ID pero no se guardó en local (el problema actual)
+            // Si NO hay MasterKey guardada, lo guardamos y mostramos el error de emergencia.
+            if (!activeId) { 
                 localStorage.setItem(MASTER_KEY, u.uid);
-                showIdError(u.uid); // Muestra la ID en grande para que la copien
-            } else {
-                // Falla total (debería ser imposible si Firebase está activo)
-                showIdError('ERROR FATAL');
+                showIdError(u.uid); // Muestra el ID de emergencia
+                return;
             }
+            
+            // Si llegamos aquí, la App está lista.
+            $('user-id-full').textContent=activeId; 
+            $('sync-status-msg').classList.remove('hidden');
+
+            // Esconde el mensaje de error y muestra la App
+            document.getElementById('id-emergency-message').classList.add('hidden');
+            document.getElementById('cierre-form').classList.remove('hidden');
+            document.getElementById('historial-lista').classList.remove('hidden');
+
+            const path=`artifacts/${appId}/users/${activeId}`;
+            colCierres=collection(db,`${path}/cierres_v2`); colProd=collection(db,`${path}/productos`);
+            colEmp=collection(db,`${path}/empleados`); colGen=collection(db,`${path}/gastos_gen`);
+            setupSubs();
+        } else {
+            // Si no hay usuario de Firebase (algo raro, pero pasa al inicio)
+             showIdError('Conectando...');
         }
     });
     
-    // Intenta iniciar sesión anónimamente. Esto genera el 'u.uid' que necesitamos.
+    // Intenta iniciar sesión anónimamente. Esto dispara el 'onAuthStateChanged' y genera el ID.
     if(initialAuthToken) await signInWithCustomToken(auth,initialAuthToken); else await signInAnonymously(auth);
 }
 
