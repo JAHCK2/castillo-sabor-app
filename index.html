@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v33</title>
+<title>EL CASTILLO DEL SABOR 🏰 v33-TEST</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -72,13 +72,30 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
     </div>
 </div>
 
+<!-- AVISO DE ERROR DE CONFIGURACIÓN (Nuevo para diagnóstico) -->
+<div id="config-error-alert" class="hidden fixed inset-0 bg-black bg-opacity-80 z-[200] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border-4 border-red-500">
+        <div class="text-5xl">🔌</div>
+        <h2 class="text-2xl font-extrabold text-red-600">¡FALTA CONEXIÓN!</h2>
+        <p class="text-gray-600 text-sm">
+            El código está funcionando, pero no tiene las <strong>"Llaves" (API Keys)</strong> de Firebase para conectarse a la nube fuera de Gemini.
+        </p>
+        <div class="bg-gray-100 p-3 rounded-lg text-left">
+            <p class="text-xs font-mono text-gray-500 mb-1">Error detectado:</p>
+            <code class="text-xs font-bold text-red-500 block">firebaseConfig is EMPTY</code>
+        </div>
+        <p class="text-xs text-gray-400">Avísame en el chat que viste este mensaje para darte tus llaves.</p>
+        <button onclick="location.reload()" class="w-full py-3 bg-gray-800 text-white rounded-xl font-bold">Reintentar</button>
+    </div>
+</div>
+
 <div id="app-wrapper" class="app-container p-3 pb-24">
     <!-- Header Compacto -->
     <header class="mb-3 no-print flex flex-col gap-2">
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1>
-                <p class="text-xs text-indigo-500 font-medium">v33 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+                <p class="text-xs text-indigo-500 font-medium">v33-TEST <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
             </div>
             <div id="auth-status" class="text-right flex items-center gap-2">
                 <!-- ID Maestra Visible -->
@@ -333,11 +350,14 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, onSnapshot, collection, query, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const appId = typeof __app_id!=='undefined'?__app_id:'default-app';
+// INTENTO DE CARGA DE CONFIGURACIÓN:
+// 1. Si estamos en Gemini, __firebase_config existe y tiene las llaves.
+// 2. Si estamos en Netlify, __firebase_config NO existe, y devuelve un objeto vacío {}.
 const firebaseConfig = JSON.parse(typeof __firebase_config!=='undefined'?__firebase_config:'{}');
+
 const initialAuthToken = typeof __initial_auth_token!=='undefined'?__initial_auth_token:null; 
 const BASE = 200000;
 const MASTER_KEY = 'masterUserId';
-// ID Maestra de tu negocio (se usa si no se ha configurado otra)
 const HARDCODED_MASTER_ID = '16417928698688070577'; 
 
 const PRE_GASTOS = [{nombre:"Naranjas",tipo:"variable"},{nombre:"Buñuelos",tipo:"fijo",precio:1000},{nombre:"Carne",tipo:"variable"},{nombre:"Pollo",tipo:"variable"},{nombre:"Verduras",tipo:"variable"},{nombre:"Mora",tipo:"variable"},{nombre:"Avena",tipo:"fijo",precio:5000},{nombre:"Servilletas",tipo:"fijo",precio:3000},{nombre:"Bolsas",tipo:"fijo",precio:2000},{nombre:"Jabón",tipo:"fijo",precio:6000},{nombre:"Cloro",tipo:"fijo",precio:4000},{nombre:"Café",tipo:"variable"},{nombre:"Azúcar",tipo:"fijo",precio:4500},{nombre:"Queso",tipo:"variable"},{nombre:"Harina Trigo",tipo:"fijo",precio:4500},{nombre:"Harina Maíz",tipo:"fijo",precio:4200},{nombre:"Sal",tipo:"fijo",precio:1500},{nombre:"Leche",tipo:"fijo",precio:4800},{nombre:"Huevos",tipo:"variable"},{nombre:"Vasos",tipo:"fijo",precio:3000}];
@@ -355,7 +375,14 @@ const fmtTime = d => new Date(d).toLocaleTimeString('es-CO',{hour:'numeric',minu
 const norm = s => s?s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase():'';
 
 async function init(){
-    if(!Object.keys(firebaseConfig).length) return;
+    // DIAGNÓSTICO DE LLAVES: Si el objeto firebaseConfig está vacío, mostramos la alerta roja.
+    if(!Object.keys(firebaseConfig).length) {
+        console.error("ERROR CRÍTICO: No hay configuración de Firebase.");
+        document.getElementById('config-error-alert').classList.remove('hidden');
+        $('auth-status').innerHTML = '<span class="text-red-500 font-bold bg-red-100 px-2 py-1 rounded text-[10px]">⚠️ SIN CONEXIÓN</span>';
+        return; // Detenemos la ejecución para que no intente conectarse sin llaves
+    }
+
     const app=initializeApp(firebaseConfig); db=getFirestore(app); auth=getAuth(app);
     
     // 1. Autenticación (Prioridad: Token > Anónimo)
@@ -365,11 +392,9 @@ async function init(){
     onAuthStateChanged(auth,u=>{
         if(u){
             // LOGICA DE SINCRONIZACIÓN MULTI-DISPOSITIVO (GITHUB DEPLOYMENT)
-            // Si es un dispositivo nuevo, usamos la ID Maestra Hardcodeada para que vea los datos automáticamente.
             let storedId = localStorage.getItem(MASTER_KEY);
             
             if (!storedId) {
-                // Es la primera vez en este dispositivo: Forzamos conexión a la base de datos maestra
                 localStorage.setItem(MASTER_KEY, HARDCODED_MASTER_ID);
                 storedId = HARDCODED_MASTER_ID;
             }
