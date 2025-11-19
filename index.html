@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v23</title>
+<title>EL CASTILLO DEL SABOR 🏰 v24</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -78,11 +78,16 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1>
-                <p class="text-xs text-indigo-500 font-medium">v23 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+                <p class="text-xs text-indigo-500 font-medium">v24 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
             </div>
-            <div id="auth-status" class="text-right">
-                 <div id="sync-status-msg" class="hidden inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full mb-1">● ONLINE</div>
-                 <button id="sync-btn" class="block ml-auto text-[10px] bg-white border border-indigo-200 text-indigo-600 px-2 py-1 rounded-lg shadow-sm active:scale-95 transition-transform">ID: <span id="user-id-short">...</span> ⚙️</button>
+            <div id="auth-status" class="text-right flex items-center gap-2">
+                <!-- Campo para mostrar la ID MAESTRA COMPLETA (CORRECCIÓN V24) -->
+                <div class="flex flex-col items-end">
+                    <div id="sync-status-msg" class="hidden inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full mb-1">● ONLINE</div>
+                    <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">ID Sincronización:</div>
+                    <span id="user-id-full" class="font-mono text-xs text-gray-700 font-medium break-all select-all hover:bg-yellow-50 p-1 rounded">...</span>
+                </div>
+                 <button id="sync-btn" class="w-8 h-8 flex items-center justify-center text-xl bg-white border border-indigo-200 text-indigo-600 rounded-lg shadow-sm active:scale-95 transition-transform" title="Sincronizar/Cambiar ID">⚙️</button>
             </div>
         </div>
     </header>
@@ -351,7 +356,8 @@ async function init(){
     onAuthStateChanged(auth,u=>{
         if(u){
             activeId=localStorage.getItem(MASTER_KEY)||u.uid;
-            $('user-id-short').textContent=activeId.substring(0,4)+'...'; 
+            // Modificación V24: Muestra la ID completa en la cabecera del PC
+            $('user-id-full').textContent=activeId; 
             $('sync-status-msg').classList.remove('hidden');
             const path=`artifacts/${appId}/users/${activeId}`;
             colCierres=collection(db,`${path}/cierres_v2`); colProd=collection(db,`${path}/productos`);
@@ -457,7 +463,8 @@ $('fecha-actual').dataset.iso=today.toISOString().split('T')[0];
 $('add-gasto-btn').onclick=()=>addItem('g'); $('add-retiro-btn').onclick=()=>addItem('r');
 $('save-cierre-btn').onclick=window.saveCierre;
 $('edit-modal-cancel-btn').onclick=()=>$('edit-modal').style.display='none';
-$('sync-btn').onclick=()=>{$('sync-modal').style.display='flex';$('sync-id-input').value=activeId;};
+// Modificación V24: El botón ⚙️ siempre muestra el modal para introducir la ID a sincronizar.
+$('sync-btn').onclick=()=>{$('sync-modal').style.display='flex';$('sync-id-input').value='';};
 $('sync-modal-save-btn').onclick=()=>{localStorage.setItem(MASTER_KEY,$('sync-id-input').value);location.reload();};
 $('sync-modal-cancel-btn').onclick=()=>$('sync-modal').style.display='none';
 $('efectivo-final').oninput=renderBitacora; $('pagos-digitales').oninput=renderBitacora;
