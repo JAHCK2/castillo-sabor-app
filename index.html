@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v27</title>
+<title>EL CASTILLO DEL SABOR 🏰 v29</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -78,7 +78,7 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1>
-                <p class="text-xs text-indigo-500 font-medium">v27 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+                <p class="text-xs text-indigo-500 font-medium">v29 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
             </div>
             <div id="auth-status" class="text-right flex items-center gap-2">
                 <!-- ID Maestra Visible (Mostrará el ID solo si existe) -->
@@ -104,10 +104,10 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
     <!-- VISTA: CAJA (BITÁCORA) -->
     <!-- Se esconde si no hay ID Maestra y se muestra el mensaje de error -->
     <div id="bitacora-view" class="space-y-3">
-        <!-- MENSAJE DE EMERGENCIA PARA ID (V27) -->
+        <!-- MENSAJE DE EMERGENCIA PARA ID (V28) -->
         <div id="id-emergency-message" class="hidden bg-red-100 p-6 rounded-2xl shadow-xl border-4 border-red-500 space-y-4 text-center">
             <h2 class="text-xl font-extrabold text-red-800">¡ERROR CRÍTICO DE SESIÓN!</h2>
-            <p class="text-sm text-gray-700">El navegador está bloqueando el guardado de la ID. Copia el siguiente código de inmediato para sincronizar tus dispositivos.</p>
+            <p class="text-sm text-gray-700">El navegador está bloqueando el guardado de la ID. Por favor, **copia la ID** y luego haz clic en Reiniciar Sesión.</p>
             <div class="bg-white p-4 rounded-xl border border-dashed border-red-400">
                 <span class="text-red-700 text-sm font-bold block mb-1">CÓDIGO ID MAESTRA:</span>
                 <p id="emergency-id-display" class="font-mono text-lg font-extrabold text-indigo-900 break-all select-all">...</p>
@@ -346,9 +346,10 @@ import { getFirestore, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, onSnapsh
 
 const appId = typeof __app_id!=='undefined'?__app_id:'default-app';
 const firebaseConfig = JSON.parse(typeof __firebase_config!=='undefined'?__firebase_config:'{}');
-const initialAuthToken = typeof __initial_auth_token!=='undefined'?__initial_auth_token:null;
+const initialAuthToken = typeof __initial_auth_token!=='undefined'?initialAuthToken:null; 
 const BASE = 200000;
 const MASTER_KEY = 'masterUserId';
+const HARDCODED_MASTER_ID = '16417928698688070577'; // ID Maestra encontrada en el historial
 
 const PRE_GASTOS = [{nombre:"Naranjas",tipo:"variable"},{nombre:"Buñuelos",tipo:"fijo",precio:1000},{nombre:"Carne",tipo:"variable"},{nombre:"Pollo",tipo:"variable"},{nombre:"Verduras",tipo:"variable"},{nombre:"Mora",tipo:"variable"},{nombre:"Avena",tipo:"fijo",precio:5000},{nombre:"Servilletas",tipo:"fijo",precio:3000},{nombre:"Bolsas",tipo:"fijo",precio:2000},{nombre:"Jabón",tipo:"fijo",precio:6000},{nombre:"Cloro",tipo:"fijo",precio:4000},{nombre:"Café",tipo:"variable"},{nombre:"Azúcar",tipo:"fijo",precio:4500},{nombre:"Queso",tipo:"variable"},{nombre:"Harina Trigo",tipo:"fijo",precio:4500},{nombre:"Harina Maíz",tipo:"fijo",precio:4200},{nombre:"Sal",tipo:"fijo",precio:1500},{nombre:"Leche",tipo:"fijo",precio:4800},{nombre:"Huevos",tipo:"variable"},{nombre:"Vasos",tipo:"fijo",precio:3000}];
 const PRE_GEN = [{desc:"Arriendo",cat:"Negocio"},{desc:"Luz Local",cat:"Negocio"},{desc:"Agua Local",cat:"Negocio"},{desc:"Gas Local",cat:"Negocio"},{desc:"Luz Hogar",cat:"Hogar"},{desc:"Internet",cat:"Hogar"},{desc:"Celular",cat:"Personal"},{desc:"Salud",cat:"Personal"}];
@@ -389,14 +390,32 @@ async function init(){
         if(u){
             activeId=localStorage.getItem(MASTER_KEY);
             
-            // Si NO hay MasterKey guardada, lo guardamos y mostramos el error de emergencia.
-            if (!activeId) { 
-                localStorage.setItem(MASTER_KEY, u.uid);
-                showIdError(u.uid); // Muestra el ID de emergencia
-                return;
+            // LÓGICA DE INYECCIÓN Y CHEQUEO DE ID MAESTRA (V28)
+            if (!activeId) {
+                // 1. Si no hay ID guardada en LocalStorage, la inyectamos
+                localStorage.setItem(MASTER_KEY, HARDCODED_MASTER_ID);
+                activeId = HARDCODED_MASTER_ID;
+
+                // 2. Si el ID que acaba de generar Firebase (u.uid) no es el ID Maestra,
+                //    mostramos el error de emergencia.
+                if (u.uid !== HARDCODED_MASTER_ID) {
+                   showIdError(HARDCODED_MASTER_ID); 
+                   // No hacemos reload, esperamos que el usuario copie la ID
+                   return;
+                }
+            } else if (activeId !== HARDCODED_MASTER_ID) {
+                // Si ya hay un ID guardado, pero es diferente al ID Maestra, 
+                // forzamos el cambio al ID Maestra (caso de sincronización).
+                localStorage.setItem(MASTER_KEY, HARDCODED_MASTER_ID);
+                activeId = HARDCODED_MASTER_ID;
+                // Forzamos una recarga para que el nuevo ID se active en la sesión de Firebase
+                if (u.uid !== HARDCODED_MASTER_ID) {
+                    setTimeout(() => location.reload(), 100);
+                    return;
+                }
             }
             
-            // Si llegamos aquí, la App está lista.
+            // Si llegamos aquí, la App está lista y tiene la ID Maestra correcta
             $('user-id-full').textContent=activeId; 
             $('sync-status-msg').classList.remove('hidden');
 
@@ -423,7 +442,8 @@ function setupSubs(){
     if(subReporte)subReporte();
     subReporte=onSnapshot(doc(colCierres,$('fecha-actual').dataset.iso),s=>{
         const d=s.data()||{}; $('efectivo-final').value=d.ef||''; $('pagos-digitales').value=d.dig||'';
-        gastos=d.gastos||[]; retiros=d.retiros||[]; renderBitacora();
+        gastos=d.gastos||[]; retiros=retiros.map(r => ({...r, id: r.id || Date.now() + Math.random().toString().slice(2)})); // Asegurar ID en retiros
+        retiros=retiros||[]; renderBitacora();
     });
     if(subProd)subProd();
     subProd=onSnapshot(query(colProd),async s=>{
