@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<!-- CONFIGURACIÓN PARA MODO APP (PWA) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Castillo Sabor">
+<meta name="theme-color" content="#4338ca">
+<link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
+<link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
+<title>EL CASTILLO DEL SABOR 🏰 v23</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Estilos base y animaciones */
+body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;}
+.app-container{max-width:600px;margin:0 auto; min-height: 100vh; background-color: #f3f4f6;}
+.log-item,.producto-item{animation:slideIn .3s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+
+/* Popover de búsqueda */
+.search-results-popover{max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;position:absolute;z-index:50;width:100%;background:#fff;box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);}
+.search-results-popover div{padding:.75rem 1rem;cursor:pointer;border-bottom:1px solid #f3f4f6;}
+.search-results-popover div:hover{background-color:#eef2ff;color:#4338ca;font-weight:500;}
+
+/* Botones de Navegación */
+.nav-btn{flex:1;padding:.5rem .1rem;font-size:.75rem;border-radius:.5rem;text-align:center;transition:all 0.2s;font-weight:500;}
+.nav-btn-active{background-color:#4f46e5;color:#fff;box-shadow:0 2px 4px rgba(79,70,229,0.3);}
+.nav-btn-inactive{background-color:#fff;color:#6b7280;border:1px solid #e5e7eb;}
+
+/* Botones Filtro */
+.filter-btn{flex:1;padding:.4rem;font-size:.75rem;border-radius:.375rem;text-align:center;border:1px solid #e0e7ff;white-space:nowrap;}
+.filter-btn-active{background-color:#4f46e5;color:#fff;border-color:#4338ca;}
+.filter-btn-inactive{background-color:#fff;color:#4f46e5;}
+
+/* Botones Reporte */
+.query-shortcut-btn{flex-grow:1;padding:.5rem;font-size:.8rem;border-radius:.375rem;background-color:#e0e7ff;color:#3730a3;font-weight:600;}
+
+/* Modales */
+.modal{position:fixed;inset:0;background-color:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem;backdrop-filter:blur(2px);}
+
+/* Ajustes de Impresión */
+@media print{body>*{display:none!important}#app-wrapper{display:block!important;position:absolute;top:0;left:0;width:100%;margin:0;padding:0;background:white!important}.no-print{display:none!important}#reporte-resultados-wrapper{display:block!important;box-shadow:none!important;border:none!important}#reporte-resultados,.bg-white{background-color:#fff!important;color:#000!important;border:none!important}body.print-receipt{width:80mm}body.print-receipt #app-wrapper{width:80mm}body.print-receipt .log-item{border-bottom:1px dashed #000;font-size:12px}}
+</style>
+</head>
+<body class="bg-gray-100 text-gray-900 select-none">
+
+<!-- Modales -->
+<div id="edit-modal" class="modal">
+    <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-xs space-y-4 transform transition-all">
+        <h3 class="text-lg font-bold text-gray-800">Editar Monto</h3>
+        <p id="edit-modal-desc" class="text-sm text-gray-500 font-medium">...</p>
+        <input type="number" id="edit-modal-monto" class="block w-full px-4 py-3 border-2 border-indigo-100 rounded-xl text-lg font-bold text-center focus:border-indigo-500 focus:ring-0 outline-none" onfocus="this.select()">
+        <div class="flex gap-3">
+            <button id="edit-modal-cancel-btn" class="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200">Cancelar</button>
+            <button id="edit-modal-save-btn" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div id="sync-modal" class="modal">
+    <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-xs space-y-4">
+        <div class="flex items-center gap-2 text-indigo-600"><span class="text-2xl">☁️</span><h3 class="text-lg font-bold">Sincronizar</h3></div>
+        <p class="text-gray-500 text-xs leading-relaxed">Para usar la misma base de datos en otro dispositivo, ingresa el ID Maestro del dispositivo principal:</p>
+        <input type="text" id="sync-id-input" class="block w-full px-3 py-2 border-2 border-gray-200 rounded-lg font-mono text-center text-sm focus:border-indigo-500 outline-none" placeholder="Pegar ID aquí" onfocus="this.select()">
+        <div class="flex gap-3">
+            <button id="sync-modal-cancel-btn" class="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium">Cerrar</button>
+            <button id="sync-modal-save-btn" class="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200">Conectar</button>
+        </div>
+    </div>
+</div>
+
+<div id="app-wrapper" class="app-container p-3 pb-24">
+    <!-- Header Compacto -->
+    <header class="mb-3 no-print flex flex-col gap-2">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1>
+                <p class="text-xs text-indigo-500 font-medium">v23 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+            </div>
+            <div id="auth-status" class="text-right">
+                 <div id="sync-status-msg" class="hidden inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full mb-1">● ONLINE</div>
+                 <button id="sync-btn" class="block ml-auto text-[10px] bg-white border border-indigo-200 text-indigo-600 px-2 py-1 rounded-lg shadow-sm active:scale-95 transition-transform">ID: <span id="user-id-short">...</span> ⚙️</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegación Estilo App -->
+    <div class="flex gap-1 mb-3 bg-white p-1 rounded-xl shadow-sm border border-gray-100 no-print sticky top-0 z-40">
+        <button id="goto-bitacora-btn" class="nav-btn nav-btn-active">💰 Caja</button>
+        <button id="goto-gastos-generales-btn" class="nav-btn nav-btn-inactive">📉 Gastos</button>
+        <button id="goto-productos-btn" class="nav-btn nav-btn-inactive">📋 Prod</button>
+        <button id="goto-empleados-btn" class="nav-btn nav-btn-inactive">👷 Emp</button>
+        <button id="goto-resumenes-btn" class="nav-btn nav-btn-inactive">📊 Report</button>
+    </div>
+
+    <!-- VISTA: CAJA (BITÁCORA) -->
+    <div id="bitacora-view" class="space-y-3">
+        <form id="cierre-form" class="space-y-3">
+            <!-- Sección 1: Registrar Gasto -->
+            <section class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 no-print">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">1. Gastos / Nómina</h2>
+                    <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Diario</span>
+                </div>
+                <div class="relative mb-2">
+                    <input type="text" id="gasto-search" placeholder="🔍 Buscar producto o empleado..." class="w-full pl-8 px-3 py-2.5 bg-gray-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <span class="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
+                    <div id="search-results" class="hidden search-results-popover rounded-b-lg shadow-xl"></div>
+                </div>
+                
+                <div class="flex gap-2 items-center">
+                    <input type="text" id="gasto-desc" placeholder="Descripción" class="flex-[2] px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:border-indigo-500 outline-none" readonly>
+                    <input type="number" id="gasto-cantidad" placeholder="#" class="w-10 px-1 py-2 border border-gray-200 rounded-lg text-sm text-center hidden bg-yellow-50" onfocus="this.select()">
+                    <input type="number" id="gasto-monto" placeholder="$0" class="flex-1 px-2 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 focus:border-indigo-500 outline-none" onfocus="this.select()">
+                    <button type="button" id="add-gasto-btn" class="w-10 h-10 bg-indigo-600 text-white rounded-lg flex items-center justify-center shadow-md active:bg-indigo-800 transition-colors text-xl font-bold">+</button>
+                </div>
+                <div id="lista-gastos" class="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            </section>
+
+            <!-- Sección 2: Retiros -->
+            <section class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 no-print">
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">2. Retiros de Caja</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="retiro-desc" placeholder="Motivo del retiro" class="flex-[2] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none" onfocus="this.select()">
+                    <input type="number" id="retiro-monto" placeholder="$0" class="flex-1 px-2 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 focus:border-blue-500 outline-none" onfocus="this.select()">
+                    <button type="button" id="add-retiro-btn" class="w-10 h-10 bg-blue-500 text-white rounded-lg flex items-center justify-center shadow-md active:bg-blue-700 transition-colors text-xl font-bold">+</button>
+                </div>
+                <div id="lista-retiros" class="mt-3 space-y-1"></div>
+            </section>
+
+            <!-- Sección 3: Cierre -->
+            <section class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 no-print">
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">3. Arqueo Final</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">Base Fija</label>
+                        <div id="base-fija-display" class="text-lg font-bold text-gray-700">200.000</div>
+                    </div>
+                    <div class="bg-white p-0 rounded-lg">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold mb-1 block">Efectivo en Caja</label>
+                        <input type="number" id="efectivo-final" class="w-full px-3 py-2 border-2 border-green-100 rounded-lg text-lg font-bold text-green-700 focus:border-green-500 outline-none bg-green-50" placeholder="0" onfocus="this.select()">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold mb-1 block">Pagos Digitales (Nequi/Daviplata)</label>
+                        <input type="number" id="pagos-digitales" class="w-full px-3 py-2 border-2 border-purple-100 rounded-lg text-lg font-bold text-purple-700 focus:border-purple-500 outline-none bg-purple-50" placeholder="0" onfocus="this.select()">
+                    </div>
+                </div>
+            </section>
+            
+            <!-- RESUMEN PRINCIPAL -->
+            <section class="bg-gray-900 text-white p-4 rounded-2xl shadow-lg no-print text-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 opacity-10 text-6xl">🏰</div>
+                <div class="space-y-1 relative z-10">
+                    <div class="flex justify-between text-gray-300 text-xs"><span>Total Gastos (Caja):</span><span id="resumen-gastos" class="text-red-300 font-mono">0</span></div>
+                    <div class="flex justify-between text-gray-300 text-xs"><span>Total Retiros:</span><span id="resumen-retiros" class="text-blue-300 font-mono">0</span></div>
+                    <div class="h-px bg-gray-700 my-2"></div>
+                    <div class="flex justify-between"><span>Ventas Efectivo (Calc):</span><span id="resumen-ventas-efectivo" class="text-green-400 font-mono font-bold">0</span></div>
+                    <div class="flex justify-between"><span>Ventas Digitales:</span><span id="resumen-ventas-digital" class="text-purple-400 font-mono font-bold">0</span></div>
+                    <div class="flex justify-between items-end mt-2 pt-2 border-t border-gray-700">
+                        <span class="font-bold text-gray-400 pb-1">VENTA TOTAL</span>
+                        <span id="resumen-venta-total" class="text-2xl font-bold text-white tracking-tight">0</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-500 mt-1"><span>Ganancia (Venta - Gastos):</span><span id="resumen-ganancia-neta">0</span></div>
+                </div>
+            </section>
+
+            <button type="button" id="save-cierre-btn" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-bold shadow-lg active:scale-[0.98] transition-transform no-print flex justify-center items-center gap-2 text-lg">
+                <span>💾</span> Guardar Día
+            </button>
+            <p id="save-message" class="text-center text-green-600 text-sm font-bold h-5 no-print"></p>
+        </form>
+
+        <div class="mt-8 no-print">
+            <h3 class="font-bold text-gray-400 text-xs uppercase mb-2">Historial Reciente</h3>
+            <div id="historial-lista" class="space-y-2 text-sm opacity-80"></div>
+        </div>
+    </div>
+
+    <!-- VISTA: GASTOS GENERALES -->
+    <div id="gastos-generales-view" class="hidden space-y-3">
+        <form id="gasto-general-form" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+            <h3 class="font-bold text-gray-800">Nuevo Gasto General</h3>
+            <!-- Filtros Categoría -->
+            <div id="gasto-general-filter-buttons" class="flex gap-1 text-xs overflow-x-auto pb-1 no-scrollbar">
+                <button type="button" class="filter-btn filter-btn-active min-w-[50px]" data-categoria="Todos">Todos</button>
+                <button type="button" class="filter-btn filter-btn-inactive min-w-[50px]" data-categoria="Negocio">Negocio</button>
+                <button type="button" class="filter-btn filter-btn-inactive min-w-[50px]" data-categoria="Hogar">Hogar</button>
+                <button type="button" class="filter-btn filter-btn-inactive min-w-[50px]" data-categoria="Personal">Pers</button>
+                <button type="button" class="filter-btn filter-btn-inactive min-w-[50px]" data-categoria="Otros">Otros</button>
+            </div>
+            <div class="relative">
+                <input type="text" id="gasto-general-search" placeholder="🔍 Buscar concepto frecuente..." class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                <div id="gasto-general-search-results" class="hidden search-results-popover rounded-lg shadow-lg"></div>
+            </div>
+            <input type="text" id="gasto-general-desc" placeholder="Descripción del gasto" class="w-full px-3 py-2 border border-gray-200 rounded-lg" required>
+            <div class="flex gap-2">
+                <select id="gasto-general-categoria" class="flex-1 px-2 py-2 border border-gray-200 rounded-lg bg-white text-sm">
+                    <option>Negocio</option><option>Hogar</option><option>Personal</option><option>Otros</option>
+                </select>
+                <input type="number" id="gasto-general-monto" placeholder="$ Monto" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg font-bold" onfocus="this.select()">
+            </div>
+            <button type="submit" id="save-gasto-general-btn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md active:bg-indigo-700">Registrar Gasto</button>
+            <p id="gasto-general-save-message" class="text-center text-sm text-green-600 h-5"></p>
+        </form>
+        <div id="lista-gastos-generales" class="mt-4 space-y-2 text-sm pb-10"></div>
+    </div>
+
+    <!-- VISTA: PRODUCTOS -->
+    <div id="productos-view" class="hidden space-y-3">
+        <form id="producto-form" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 id="producto-form-title" class="font-bold text-gray-800">Gestionar Productos</h3>
+                <button type="button" id="clear-producto-form-btn" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Limpiar</button>
+            </div>
+            <input type="hidden" id="producto-id">
+            
+            <div class="relative">
+                <input type="text" id="producto-manage-search" placeholder="🔎 Buscar para editar..." class="w-full px-3 py-2 bg-gray-50 border rounded-lg text-sm">
+                <div id="producto-manage-search-results" class="hidden search-results-popover rounded-lg shadow-lg"></div>
+            </div>
+            
+            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-2">
+                <input type="text" id="producto-nombre" placeholder="Nombre del producto" class="w-full px-3 py-2 border rounded-lg text-sm font-medium" required>
+                <div class="flex gap-2">
+                    <select id="producto-tipo" class="w-1/2 px-2 py-2 border rounded-lg text-sm bg-white">
+                        <option value="variable">Precio Variable</option>
+                        <option value="fijo">Precio Fijo</option>
+                    </select>
+                    <div id="producto-precio-wrapper" class="hidden w-1/2">
+                        <input type="number" id="producto-precio" placeholder="$ Precio" class="w-full px-3 py-2 border rounded-lg text-sm font-bold">
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-xs font-bold text-gray-500 uppercase mt-2">Proveedores</div>
+            <div id="proveedores-en-formulario-lista" class="text-xs space-y-1 bg-white border rounded-lg p-1 min-h-[20px]"></div>
+            <div class="flex gap-1">
+                <input id="prov-nom" placeholder="Nombre Prov." class="flex-[2] border rounded px-2 py-1 text-sm">
+                <input id="prov-tel" placeholder="Teléfono" class="flex-1 border rounded px-2 py-1 text-sm">
+                <button type="button" id="add-proveedor-btn" class="bg-blue-100 text-blue-600 px-3 rounded font-bold">+</button>
+            </div>
+            
+            <div class="flex gap-2 mt-2 pt-2 border-t">
+                <button type="button" id="delete-producto-btn" class="hidden w-10 bg-red-100 text-red-600 rounded-lg font-bold">🗑️</button>
+                <button type="submit" id="save-producto-btn" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold shadow-sm">Guardar Cambios</button>
+            </div>
+            <p id="producto-save-message" class="text-center text-sm text-green-600 h-4"></p>
+        </form>
+        <div id="lista-productos" class="mt-4 space-y-2 text-sm pb-10"></div>
+    </div>
+
+    <!-- VISTA: EMPLEADOS -->
+    <div id="empleados-view" class="hidden space-y-3">
+        <form id="empleado-form" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+            <h3 id="empleado-form-title" class="font-bold text-gray-800">Nómina / Empleados</h3>
+            <input type="hidden" id="empleado-id">
+            <input type="text" id="empleado-nombre" placeholder="Nombre del empleado" class="w-full px-3 py-2 border rounded-lg" required>
+            <input type="number" id="empleado-sueldo" placeholder="Sueldo Diario ($)" class="w-full px-3 py-2 border rounded-lg font-bold text-gray-700" onfocus="this.select()">
+            <div class="flex gap-2">
+                <button type="button" id="cancel-edit-empleado-btn" class="hidden flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg">Cancelar</button>
+                <button type="submit" id="save-empleado-btn" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold shadow-sm">Guardar Empleado</button>
+            </div>
+            <p id="empleado-save-message" class="text-center text-sm text-green-600 h-4"></p>
+        </form>
+        <div id="lista-empleados" class="mt-4 space-y-2 text-sm"></div>
+    </div>
+
+    <!-- VISTA: REPORTES -->
+    <div id="resumenes-view" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 no-print">
+            <h3 class="font-bold text-gray-800 mb-3">Consultar Historial</h3>
+            <div class="grid grid-cols-4 gap-2 mb-3">
+                <button class="query-shortcut-btn" data-range="today">Hoy</button>
+                <button class="query-shortcut-btn" data-range="this_month">Este Mes</button>
+                <button class="query-shortcut-btn" data-range="last_month">Mes Ant.</button>
+                <button class="query-shortcut-btn" data-range="this_year">Año</button>
+            </div>
+            <div class="flex gap-2 items-center bg-gray-50 p-2 rounded-lg mb-3">
+                <input type="date" id="reporte-fecha-inicio" class="bg-white border border-gray-200 rounded px-2 py-1 w-full text-xs text-gray-600">
+                <span class="text-gray-400">➞</span>
+                <input type="date" id="reporte-fecha-fin" class="bg-white border border-gray-200 rounded px-2 py-1 w-full text-xs text-gray-600">
+            </div>
+            <button id="query-rango-btn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg active:bg-indigo-700 transition-colors">Generar Reporte</button>
+        </div>
+
+        <div id="reporte-resultados-wrapper" class="hidden space-y-4 pb-12">
+            <h2 id="reporte-resultados-header" class="text-lg font-bold text-center text-gray-800 bg-indigo-50 py-2 rounded-lg border border-indigo-100"></h2>
+            
+            <div class="no-print bg-white p-3 rounded-xl mb-2 space-y-2 border border-gray-200">
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Opciones de Impresión</div>
+                <div class="flex flex-wrap gap-3">
+                    <label class="flex items-center text-sm text-gray-700 font-medium"><input type="checkbox" id="print-check-resumen" checked class="mr-2 w-4 h-4 text-indigo-600 rounded"> Resumen Fin.</label>
+                    <label class="flex items-center text-sm text-gray-700 font-medium"><input type="checkbox" id="print-check-analisis" checked class="mr-2 w-4 h-4 text-indigo-600 rounded"> Top Gastos</label>
+                    <label class="flex items-center text-sm text-gray-700 font-medium"><input type="checkbox" id="print-check-detalle" checked class="mr-2 w-4 h-4 text-indigo-600 rounded"> Detalle Movs.</label>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button id="print-carta-btn" class="flex-1 bg-white border border-blue-200 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-50">📄 Carta PDF</button>
+                    <button id="print-recibo-btn" class="flex-1 bg-gray-800 text-white py-2 rounded-lg text-sm font-bold shadow hover:bg-gray-900">🧾 Recibo Tira</button>
+                </div>
+            </div>
+
+            <div id="print-section-resumen" class="bg-gray-900 text-white p-5 rounded-xl shadow-md">
+                <h4 class="text-xs text-gray-400 uppercase mb-2">Balance del Período</h4>
+                <div id="reporte-resultados" class="space-y-1"></div>
+            </div>
+            
+            <div id="print-section-analisis" class="bg-white p-4 rounded-xl border border-gray-200">
+                <h3 class="font-bold mb-3 text-indigo-800 border-b pb-2 text-sm uppercase">🏆 Top Gastos</h3>
+                <div id="reporte-analisis-gastos" class="space-y-2"></div>
+            </div>
+            
+            <div id="print-section-detalle" class="bg-white p-4 rounded-xl border border-gray-200">
+                <h3 class="font-bold mb-3 text-indigo-800 border-b pb-2 text-sm uppercase">📝 Detalle de Movimientos</h3>
+                <div id="reporte-detalle-movimientos" class="space-y-1 max-h-96 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, onSnapshot, collection, query, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const appId = typeof __app_id!=='undefined'?__app_id:'default-app';
+const firebaseConfig = JSON.parse(typeof __firebase_config!=='undefined'?__firebase_config:'{}');
+const initialAuthToken = typeof __initial_auth_token!=='undefined'?__initial_auth_token:null;
+const BASE = 200000;
+const MASTER_KEY = 'masterUserId';
+
+const PRE_GASTOS = [{nombre:"Naranjas",tipo:"variable"},{nombre:"Buñuelos",tipo:"fijo",precio:1000},{nombre:"Carne",tipo:"variable"},{nombre:"Pollo",tipo:"variable"},{nombre:"Verduras",tipo:"variable"},{nombre:"Mora",tipo:"variable"},{nombre:"Avena",tipo:"fijo",precio:5000},{nombre:"Servilletas",tipo:"fijo",precio:3000},{nombre:"Bolsas",tipo:"fijo",precio:2000},{nombre:"Jabón",tipo:"fijo",precio:6000},{nombre:"Cloro",tipo:"fijo",precio:4000},{nombre:"Café",tipo:"variable"},{nombre:"Azúcar",tipo:"fijo",precio:4500},{nombre:"Queso",tipo:"variable"},{nombre:"Harina Trigo",tipo:"fijo",precio:4500},{nombre:"Harina Maíz",tipo:"fijo",precio:4200},{nombre:"Sal",tipo:"fijo",precio:1500},{nombre:"Leche",tipo:"fijo",precio:4800},{nombre:"Huevos",tipo:"variable"},{nombre:"Vasos",tipo:"fijo",precio:3000}];
+const PRE_GEN = [{desc:"Arriendo",cat:"Negocio"},{desc:"Luz Local",cat:"Negocio"},{desc:"Agua Local",cat:"Negocio"},{desc:"Gas Local",cat:"Negocio"},{desc:"Luz Hogar",cat:"Hogar"},{desc:"Internet",cat:"Hogar"},{desc:"Celular",cat:"Personal"},{desc:"Salud",cat:"Personal"}];
+
+let db,auth,userId,activeId,colCierres,colProd,colEmp,colGen;
+let subReporte,subHist,subProd,subEmp,subGen;
+let localProd=[],localEmp=[],localGen=[],gastos=[],retiros=[],curProv=[];
+let selItem=null,seeding=false,curCat="Todos";
+
+const $ = id => document.getElementById(id);
+const fmtNum = n => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n||0);
+const fmtDate = d => new Date(d).toLocaleDateString('es-CO');
+const fmtTime = d => new Date(d).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'});
+const norm = s => s?s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase():'';
+
+async function init(){
+    if(!Object.keys(firebaseConfig).length) return;
+    const app=initializeApp(firebaseConfig); db=getFirestore(app); auth=getAuth(app);
+    onAuthStateChanged(auth,u=>{
+        if(u){
+            activeId=localStorage.getItem(MASTER_KEY)||u.uid;
+            $('user-id-short').textContent=activeId.substring(0,4)+'...'; 
+            $('sync-status-msg').classList.remove('hidden');
+            const path=`artifacts/${appId}/users/${activeId}`;
+            colCierres=collection(db,`${path}/cierres_v2`); colProd=collection(db,`${path}/productos`);
+            colEmp=collection(db,`${path}/empleados`); colGen=collection(db,`${path}/gastos_gen`);
+            setupSubs();
+        }
+    });
+    if(initialAuthToken) await signInWithCustomToken(auth,initialAuthToken); else await signInAnonymously(auth);
+}
+
+function setupSubs(){
+    if(subReporte)subReporte();
+    subReporte=onSnapshot(doc(colCierres,$('fecha-actual').dataset.iso),s=>{
+        const d=s.data()||{}; $('efectivo-final').value=d.ef||''; $('pagos-digitales').value=d.dig||'';
+        gastos=d.gastos||[]; retiros=d.retiros||[]; renderBitacora();
+    });
+    if(subProd)subProd();
+    subProd=onSnapshot(query(colProd),async s=>{
+        localProd=[]; s.forEach(d=>localProd.push({id:d.id,...d.data()}));
+        if(!localProd.length && !seeding){seeding=true;const b=writeBatch(db);PRE_GASTOS.forEach(p=>b.set(doc(colProd),p));await b.commit();}
+        renderProd();
+    });
+    if(subEmp)subEmp();
+    subEmp=onSnapshot(query(colEmp),s=>{localEmp=[];s.forEach(d=>localEmp.push({id:d.id,...d.data()}));renderEmp();});
+    if(subGen)subGen();
+    subGen=onSnapshot(query(colGen),s=>{localGen=[];s.forEach(d=>localGen.push({id:d.id,...d.data()}));renderGen();});
+    if(subHist)subHist();
+    subHist=onSnapshot(query(colCierres),s=>{let h=[];s.forEach(d=>h.push({id:d.id,...d.data()}));$('historial-lista').innerHTML=h.sort((a,b)=>b.id.localeCompare(a.id)).slice(0,5).map(r=>`<div class="bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center"><span class="font-mono text-gray-500">${r.id.slice(5)}</span><span class="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md">${fmtNum(r.neto)}</span></div>`).join('');});
+}
+
+function renderBitacora(){
+    $('lista-gastos').innerHTML=gastos.map(g=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${g.desc}</span><span class="text-[10px] text-gray-400">${fmtTime(g.h)}</span></div><div class="flex items-center gap-2"><span class="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">${fmtNum(g.m)}</span><button onclick="window.editItem('${g.id}','g')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${g.id}','g')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    $('lista-retiros').innerHTML=retiros.map(r=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${r.desc}</span></div><div class="flex items-center gap-2"><span class="font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">${fmtNum(r.m)}</span><button onclick="window.editItem('${r.id}','r')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${r.id}','r')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    const ef=Number($('efectivo-final').value), dig=Number($('pagos-digitales').value);
+    const tg=gastos.reduce((s,i)=>s+i.m,0), tr=retiros.reduce((s,i)=>s+i.m,0);
+    const venEf=(ef-BASE)+tg+tr; const tot=(venEf>0?venEf:0)+dig;
+    
+    $('resumen-gastos').textContent=fmtNum(tg); $('resumen-retiros').textContent=fmtNum(tr);
+    $('resumen-ventas-efectivo').textContent=fmtNum(venEf>0?venEf:0); $('resumen-ventas-digital').textContent=fmtNum(dig);
+    $('resumen-venta-total').textContent=fmtNum(tot); $('resumen-ganancia-neta').textContent=fmtNum(tot-tg);
+}
+
+window.saveCierre=async()=>{
+    const ef=Number($('efectivo-final').value), dig=Number($('pagos-digitales').value);
+    const tg=gastos.reduce((s,i)=>s+i.m,0), tr=retiros.reduce((s,i)=>s+i.m,0);
+    const venEf=(ef-BASE)+tg+tr; const tot=(venEf>0?venEf:0)+dig;
+    await setDoc(doc(colCierres,$('fecha-actual').dataset.iso),{ef,dig,gastos,retiros,tg,tr,venEf:venEf>0?venEf:0,tot,neto:tot-tg},{merge:true});
+    $('save-message').textContent="✓ Guardado correctamente"; setTimeout(()=>$('save-message').textContent="",2500);
+};
+
+window.addItem=(type)=>{
+    if(type==='g'&&(!selItem||selItem.tipo==='nomina')) return;
+    const desc=type==='g'?$('gasto-desc').value:$('retiro-desc').value;
+    const m=Number($(type==='g'?'gasto-monto':'retiro-monto').value);
+    if(!desc||m<=0)return;
+    const item={id:Date.now()+'',desc:desc+(type==='g'&&$('gasto-cantidad').value>0?` (x${$('gasto-cantidad').value})`:''),m,h:new Date().toISOString()};
+    if(type==='g')gastos.push(item);else retiros.push(item);
+    if(type==='g'){$('gasto-desc').value='';$('gasto-monto').value='';$('gasto-cantidad').classList.add('hidden');$('gasto-monto').readOnly=false;$('gasto-search').focus();selItem=null;}
+    else{$('retiro-desc').value='';$('retiro-monto').value='';}
+    renderBitacora(); window.saveCierre();
+};
+
+window.delItem=(id,type)=>{if(type==='g')gastos=gastos.filter(i=>i.id!=id);else retiros=retiros.filter(i=>i.id!=id);renderBitacora();window.saveCierre();};
+window.editItem=(id,type)=>{
+    const item=(type==='g'?gastos:type==='r'?retiros:localGen).find(i=>i.id===id);
+    if(!item)return;
+    $('edit-modal').style.display='flex';$('edit-modal').dataset.id=id;$('edit-modal').dataset.type=type;
+    $('edit-modal-desc').textContent=item.desc||item.d||item.descripcion;$('edit-modal-monto').value=item.m||item.monto;
+    $('edit-modal-monto').focus();
+};
+
+$('edit-modal-save-btn').onclick=async()=>{
+    const id=$('edit-modal').dataset.id, type=$('edit-modal').dataset.type, m=Number($('edit-modal-monto').value);
+    if(type==='gen')await setDoc(doc(colGen,id),{m},{merge:true});
+    else{const l=type==='g'?gastos:retiros;const i=l.find(x=>x.id===id);if(i)i.m=m;renderBitacora();window.saveCierre();}
+    $('edit-modal').style.display='none';
+};
+
+$('gasto-search').oninput=(e)=>{
+    const q=norm(e.target.value), res=$('search-results'); res.innerHTML='';
+    if(!q){res.classList.add('hidden');return;}
+    [...localProd.map(p=>({...p,l:p.nombre})),...localEmp.map(e=>({...e,l:`Nómina: ${e.nombre}`,tipo:'nomina',precio:e.sueldo}))]
+    .filter(x=>norm(x.l).includes(q)).forEach(x=>{
+        const d=document.createElement('div'); d.innerHTML=`<div class="font-medium text-gray-800">${x.l}</div>${x.tipo==='nomina'?'<div class="text-xs text-green-600">Empleado</div>':'<div class="text-xs text-indigo-500">Producto</div>'}`;
+        d.onclick=()=>{
+            selItem=x; $('gasto-search').value=''; res.classList.add('hidden');
+            if(x.tipo==='nomina'){gastos.push({id:Date.now()+'',desc:x.l,m:x.precio,h:new Date().toISOString()});renderBitacora();window.saveCierre();}
+            else{$('gasto-desc').value=x.nombre;$('gasto-monto').value=x.precio||'';
+                 if(x.tipo==='fijo'){$('gasto-cantidad').classList.remove('hidden');$('gasto-cantidad').value=1;$('gasto-monto').readOnly=true;}
+                 else{$('gasto-cantidad').classList.add('hidden');$('gasto-monto').readOnly=false;}$('gasto-monto').focus();
+            }
+        }; res.appendChild(d);
+    }); res.classList.remove('hidden');
+};
+
+// Init
+const today=new Date();
+$('fecha-actual').textContent=today.toLocaleDateString('es-CO');
+$('fecha-actual').dataset.iso=today.toISOString().split('T')[0];
+['bitacora','gastos-generales','productos','empleados','resumenes'].forEach(v=>{
+    $(`goto-${v}-btn`).onclick=()=>{document.querySelectorAll('[id$="-view"]').forEach(e=>e.classList.add('hidden'));$(`${v}-view`).classList.remove('hidden');document.querySelectorAll('.nav-btn').forEach(b=>b.className='nav-btn nav-btn-inactive');$(`goto-${v}-btn`).className='nav-btn nav-btn-active';}
+});
+$('add-gasto-btn').onclick=()=>addItem('g'); $('add-retiro-btn').onclick=()=>addItem('r');
+$('save-cierre-btn').onclick=window.saveCierre;
+$('edit-modal-cancel-btn').onclick=()=>$('edit-modal').style.display='none';
+$('sync-btn').onclick=()=>{$('sync-modal').style.display='flex';$('sync-id-input').value=activeId;};
+$('sync-modal-save-btn').onclick=()=>{localStorage.setItem(MASTER_KEY,$('sync-id-input').value);location.reload();};
+$('sync-modal-cancel-btn').onclick=()=>$('sync-modal').style.display='none';
+$('efectivo-final').oninput=renderBitacora; $('pagos-digitales').oninput=renderBitacora;
+
+// Helpers
+function renderProd(){$('lista-productos').innerHTML=localProd.map(p=>`<div class="bg-white p-3 border border-gray-100 rounded-xl flex justify-between items-center shadow-sm"><div><span class="font-bold text-gray-800 block">${p.nombre}</span><span class="text-xs text-gray-500">${p.tipo==='fijo'?fmtNum(p.precio):'Variable'}</span></div><button onclick="fillProd('${p.id}')" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
+window.fillProd=(id)=>{const p=localProd.find(x=>x.id===id);$('producto-id').value=id;$('producto-nombre').value=p.nombre;$('producto-tipo').value=p.tipo;$('producto-precio').value=p.precio;curProv=p.prov||[];renderProvList();$('producto-form-title').textContent='Editar: '+p.nombre;$('delete-producto-btn').classList.remove('hidden');document.querySelector('#productos-view').scrollIntoView();};
+window.delProd=async(id)=>{await deleteDoc(doc(colProd,id));$('clear-producto-form-btn').click();};
+$('save-producto-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('producto-nombre').value,tipo:$('producto-tipo').value,precio:Number($('producto-precio').value),prov:curProv};const id=$('producto-id').value;if(id)await setDoc(doc(colProd,id),d,{merge:true});else await addDoc(colProd,d);$('clear-producto-form-btn').click();$('producto-save-message').textContent='Guardado';setTimeout(()=>$('producto-save-message').textContent='',2000);};
+$('add-proveedor-btn').onclick=()=>{curProv.push({n:$('prov-nom').value,t:$('prov-tel').value});renderProvList();$('prov-nom').value='';$('prov-tel').value='';};
+$('producto-manage-search').oninput=(e)=>{const q=norm(e.target.value),el=$('producto-manage-search-results');el.innerHTML='';if(!q){el.classList.add('hidden');return;}localProd.filter(p=>norm(p.nombre).includes(q)).forEach(p=>{const d=document.createElement('div');d.textContent=p.nombre;d.onclick=()=>{fillProd(p.id);el.classList.add('hidden');$('producto-manage-search').value='';};el.appendChild(d);});el.classList.remove('hidden');};
+$('clear-producto-form-btn').onclick=()=>{ $('producto-form').reset(); $('producto-id').value=''; $('producto-form-title').textContent='Agregar Producto'; $('delete-producto-btn').classList.add('hidden'); curProv=[]; renderProvList(); };
+function renderProvList(){$('proveedores-en-formulario-lista').innerHTML=curProv.map((p,i)=>`<div class="flex justify-between bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs items-center"><span><span class="font-bold">${p.n}</span> (${p.t})</span><button onclick="curProv.splice(${i},1);renderProvList()" class="text-red-400 font-bold px-2">✕</button></div>`).join('');}
+$('producto-tipo').onchange=(e)=>{if(e.target.value==='fijo')$('producto-precio-wrapper').classList.remove('hidden');else $('producto-precio-wrapper').classList.add('hidden');};
+
+$('save-empleado-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('empleado-nombre').value,sueldo:Number($('empleado-sueldo').value)};const id=$('empleado-id').value;if(id)await setDoc(doc(colEmp,id),d,{merge:true});else await addDoc(colEmp,d);$('empleado-form').reset();};
+function renderEmp(){$('lista-empleados').innerHTML=localEmp.map(e=>`<div class="bg-white p-3 border border-gray-100 rounded-xl shadow-sm flex justify-between items-center"><div><span class="font-bold text-gray-800 block">${e.nombre}</span><span class="text-xs text-gray-500">Diario: ${fmtNum(e.sueldo)}</span></div><button onclick="$('empleado-id').value='${e.id}';$('empleado-nombre').value='${e.nombre}';$('empleado-sueldo').value='${e.sueldo}';" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
+
+$('save-gasto-general-btn').onclick=async(e)=>{e.preventDefault();await addDoc(colGen,{d:$('gasto-general-desc').value,c:$('gasto-general-categoria').value,m:Number($('gasto-general-monto').value),h:new Date().toISOString(),fecha:$('fecha-actual').dataset.iso});$('gasto-general-form').reset();$('gasto-general-save-message').textContent='Gasto registrado';setTimeout(()=>$('gasto-general-save-message').textContent='',2000);};
+function renderGen(){$('lista-gastos-generales').innerHTML=localGen.filter(x=>curCat==='Todos'||x.c===curCat).sort((a,b)=>b.h.localeCompare(a.h)).map(g=>`<div class="bg-white p-3 border border-gray-100 rounded-xl shadow-sm flex justify-between items-center"><div><span class="font-bold text-gray-800 block">${g.d}</span><span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase tracking-wider">${g.c}</span></div><div class="flex items-center gap-3"><span class="text-red-500 font-bold">${fmtNum(g.m)}</span><button onclick="editItem('${g.id}','gen')" class="text-gray-400 hover:text-indigo-600">✎</button></div></div>`).join('');}
+$('gasto-general-filter-buttons').onclick=(e)=>{if(e.target.classList.contains('filter-btn')){document.querySelectorAll('#gasto-general-filter-buttons .filter-btn').forEach(b=>b.className='filter-btn filter-btn-inactive');e.target.className='filter-btn filter-btn-active';curCat=e.target.dataset.categoria;renderGen();}};
+$('gasto-general-search').oninput=(e)=>{const q=norm(e.target.value),el=$('gasto-general-search-results');el.innerHTML='';if(!q){el.classList.add('hidden');return;}PRE_GEN.filter(g=>norm(g.desc).includes(q)).forEach(g=>{const d=document.createElement('div');d.textContent=g.desc;d.onclick=()=>{ $('gasto-general-desc').value=g.desc; $('gasto-general-categoria').value=g.cat; $('gasto-general-monto').focus(); el.classList.add('hidden'); };el.appendChild(d);});el.classList.remove('hidden');};
+
+// Reportes
+$('query-rango-btn').onclick=async()=>{
+    const ini=$('reporte-fecha-inicio').value, fin=$('reporte-fecha-fin').value;
+    $('reporte-resultados-header').textContent=`Reporte: ${ini} a ${fin}`;
+    const [sC,sG]=await Promise.all([getDocs(query(colCierres,where('__name__','>=',ini),where('__name__','<=',fin))),getDocs(query(colGen,where('fecha','>=',ini),where('fecha','<=',fin)))]);
+    const rep=[],gen=[];sC.forEach(d=>rep.push(d.data()));sG.forEach(d=>gen.push(d.data()));
+    const totC=rep.reduce((a,b)=>a+(b.neto||0),0), totG=gen.reduce((a,b)=>a+b.m,0);
+    $('reporte-resultados').innerHTML=`<div class="flex justify-between border-b border-gray-700 pb-2"><span>Operativo Neto:</span><span class="font-bold">${fmtNum(totC)}</span></div><div class="flex justify-between border-b border-gray-700 py-2"><span>Gastos Generales:</span><span class="text-red-400 font-bold">- ${fmtNum(totG)}</span></div><div class="flex justify-between pt-2 text-xl font-bold text-green-400"><span>Utilidad Real:</span><span>${fmtNum(totC-totG)}</span></div>`;
+    const map={}; rep.forEach(r=>(r.gastos||[]).forEach(g=>{const n=g.desc.split(' (')[0];map[n]=(map[n]||0)+g.m;})); gen.forEach(g=>{map[g.d]=(map[g.d]||0)+g.m;});
+    $('reporte-analisis-gastos').innerHTML=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>`<div class="flex justify-between text-sm border-b border-gray-50 py-1"><span>${k}</span><span class="font-medium">${fmtNum(v)}</span></div>`).join('');
+    const movs=[]; rep.forEach(r=>(r.gastos||[]).forEach(g=>movs.push({d:g.desc,m:g.m,t:'Diario',h:g.h}))); gen.forEach(g=>movs.push({d:g.d,m:g.m,t:'General',h:g.h}));
+    $('reporte-detalle-movimientos').innerHTML=movs.sort((a,b)=>a.h.localeCompare(b.h)).map(m=>`<div class="flex justify-between text-xs border-b border-gray-50 py-1"><div><span class="font-medium text-gray-700">${m.d}</span> <span class="text-[9px] text-gray-400 bg-gray-100 px-1 rounded">${m.t}</span></div><span class="font-medium">${fmtNum(m.m)}</span></div>`).join('');
+    $('reporte-resultados-wrapper').classList.remove('hidden');
+    document.querySelector('#resumenes-view').scrollTo({top: 500, behavior: 'smooth'});
+};
+document.querySelectorAll('.query-shortcut-btn').forEach(btn=>{btn.onclick=()=>{
+    const r=btn.dataset.range, t=new Date(); let s=new Date(t), e=new Date(t);
+    if(r==='this_month')s=new Date(t.getFullYear(),t.getMonth(),1);
+    else if(r==='last_month'){s=new Date(t.getFullYear(),t.getMonth()-1,1);e=new Date(t.getFullYear(),t.getMonth(),0);}
+    else if(r==='this_year')s=new Date(t.getFullYear(),0,1);
+    $('reporte-fecha-inicio').value=s.toISOString().split('T')[0]; $('reporte-fecha-fin').value=e.toISOString().split('T')[0]; $('query-rango-btn').click();
+}});
+$('print-recibo-btn').onclick=()=>{document.body.className='print-receipt';window.print();};
+$('print-carta-btn').onclick=()=>{document.body.className='';window.print();};
+
+init();
+</script>
+</body>
+</html>
