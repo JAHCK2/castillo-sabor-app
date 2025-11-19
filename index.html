@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v24</title>
+<title>EL CASTILLO DEL SABOR 🏰 v25</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -78,10 +78,10 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1>
-                <p class="text-xs text-indigo-500 font-medium">v24 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+                <p class="text-xs text-indigo-500 font-medium">v25 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
             </div>
             <div id="auth-status" class="text-right flex items-center gap-2">
-                <!-- Campo para mostrar la ID MAESTRA COMPLETA (CORRECCIÓN V24) -->
+                <!-- ID Maestra Visible (Mostrará el ID solo si existe) -->
                 <div class="flex flex-col items-end">
                     <div id="sync-status-msg" class="hidden inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full mb-1">● ONLINE</div>
                     <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">ID Sincronización:</div>
@@ -102,7 +102,21 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
     </div>
 
     <!-- VISTA: CAJA (BITÁCORA) -->
+    <!-- Se esconde si no hay ID Maestra y se muestra el mensaje de error -->
     <div id="bitacora-view" class="space-y-3">
+        <!-- MENSAJE DE EMERGENCIA PARA ID (V25) -->
+        <div id="id-emergency-message" class="hidden bg-red-100 p-6 rounded-2xl shadow-xl border-4 border-red-500 space-y-4 text-center">
+            <h2 class="text-xl font-extrabold text-red-800">¡ERROR CRÍTICO DE SESIÓN!</h2>
+            <p class="text-sm text-gray-700">El navegador está bloqueando la ID Maestra. Copia el siguiente código de inmediato para sincronizar tus dispositivos.</p>
+            <div class="bg-white p-4 rounded-xl border border-dashed border-red-400">
+                <span class="text-red-700 text-sm font-bold block mb-1">CÓDIGO ID MAESTRA:</span>
+                <p id="emergency-id-display" class="font-mono text-lg font-extrabold text-indigo-900 break-all select-all">...</p>
+            </div>
+            <p class="text-xs text-gray-600">Presiona el botón para intentar iniciar sesión correctamente (se recargará la página).</p>
+            <button id="emergency-id-reset-btn" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold active:bg-indigo-700">Reiniciar Sesión</button>
+        </div>
+
+        <!-- Contenido normal de la bitácora (se muestra solo si hay ID) -->
         <form id="cierre-form" class="space-y-3">
             <!-- Sección 1: Registrar Gasto -->
             <section class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 no-print">
@@ -353,18 +367,47 @@ const norm = s => s?s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
 async function init(){
     if(!Object.keys(firebaseConfig).length) return;
     const app=initializeApp(firebaseConfig); db=getFirestore(app); auth=getAuth(app);
+    
+    // Función para mostrar el mensaje de error de ID (V25)
+    function showIdError(id) {
+        document.querySelectorAll('#cierre-form, .nav-btn:not(#goto-bitacora-btn)').forEach(e => e.style.display = 'none');
+        document.getElementById('id-emergency-message').classList.remove('hidden');
+        document.getElementById('emergency-id-display').textContent = id || 'Error: ID no generada';
+        document.getElementById('emergency-id-reset-btn').onclick = () => {
+            localStorage.removeItem(MASTER_KEY);
+            location.reload();
+        };
+    }
+
     onAuthStateChanged(auth,u=>{
         if(u){
             activeId=localStorage.getItem(MASTER_KEY)||u.uid;
-            // Modificación V24: Muestra la ID completa en la cabecera del PC
-            $('user-id-full').textContent=activeId; 
-            $('sync-status-msg').classList.remove('hidden');
-            const path=`artifacts/${appId}/users/${activeId}`;
-            colCierres=collection(db,`${path}/cierres_v2`); colProd=collection(db,`${path}/productos`);
-            colEmp=collection(db,`${path}/empleados`); colGen=collection(db,`${path}/gastos_gen`);
-            setupSubs();
+            
+            // Si la ID existe en local o en Firebase, muestra la App normalmente
+            if (activeId && activeId !== u.uid) { 
+                $('user-id-full').textContent=activeId; 
+                $('sync-status-msg').classList.remove('hidden');
+                
+                // Esconde el mensaje de error y muestra la App
+                document.getElementById('id-emergency-message').classList.add('hidden');
+                document.querySelectorAll('#cierre-form, .nav-btn:not(#goto-bitacora-btn)').forEach(e => e.style.display = '');
+
+                const path=`artifacts/${appId}/users/${activeId}`;
+                colCierres=collection(db,`${path}/cierres_v2`); colProd=collection(db,`${path}/productos`);
+                colEmp=collection(db,`${path}/empleados`); colGen=collection(db,`${path}/gastos_gen`);
+                setupSubs();
+            } else if (u.uid) {
+                // Si Firebase generó una ID pero no se guardó en local (el problema actual)
+                localStorage.setItem(MASTER_KEY, u.uid);
+                showIdError(u.uid); // Muestra la ID en grande para que la copien
+            } else {
+                // Falla total (debería ser imposible si Firebase está activo)
+                showIdError('ERROR FATAL');
+            }
         }
     });
+    
+    // Intenta iniciar sesión anónimamente. Esto genera el 'u.uid' que necesitamos.
     if(initialAuthToken) await signInWithCustomToken(auth,initialAuthToken); else await signInAnonymously(auth);
 }
 
@@ -389,11 +432,13 @@ function setupSubs(){
 }
 
 function renderBitacora(){
-    $('lista-gastos').innerHTML=gastos.map(g=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${g.desc}</span><span class="text-[10px] text-gray-400">${fmtTime(g.h)}</span></div><div class="flex items-center gap-2"><span class="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">${fmtNum(g.m)}</span><button onclick="window.editItem('${g.id}','g')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${g.id}','g')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
-    $('lista-retiros').innerHTML=retiros.map(r=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${r.desc}</span></div><div class="flex items-center gap-2"><span class="font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">${fmtNum(r.m)}</span><button onclick="window.editItem('${r.id}','r')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${r.id}','r')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    // ... (Código de renderizado de Bitácora, Retiros y Resumen) ...
     const ef=Number($('efectivo-final').value), dig=Number($('pagos-digitales').value);
     const tg=gastos.reduce((s,i)=>s+i.m,0), tr=retiros.reduce((s,i)=>s+i.m,0);
     const venEf=(ef-BASE)+tg+tr; const tot=(venEf>0?venEf:0)+dig;
+    
+    $('lista-gastos').innerHTML=gastos.map(g=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${g.desc}</span><span class="text-[10px] text-gray-400">${fmtTime(g.h)}</span></div><div class="flex items-center gap-2"><span class="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">${fmtNum(g.m)}</span><button onclick="window.editItem('${g.id}','g')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${g.id}','g')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    $('lista-retiros').innerHTML=retiros.map(r=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${r.desc}</span></div><div class="flex items-center gap-2"><span class="font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">${fmtNum(r.m)}</span><button onclick="window.editItem('${r.id}','r')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${r.id}','r')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
     
     $('resumen-gastos').textContent=fmtNum(tg); $('resumen-retiros').textContent=fmtNum(tr);
     $('resumen-ventas-efectivo').textContent=fmtNum(venEf>0?venEf:0); $('resumen-ventas-digital').textContent=fmtNum(dig);
@@ -408,6 +453,7 @@ window.saveCierre=async()=>{
     $('save-message').textContent="✓ Guardado correctamente"; setTimeout(()=>$('save-message').textContent="",2500);
 };
 
+// ... (Resto de funciones addItem, delItem, editItem, etc.) ...
 window.addItem=(type)=>{
     if(type==='g'&&(!selItem||selItem.tipo==='nomina')) return;
     const desc=type==='g'?$('gasto-desc').value:$('retiro-desc').value;
@@ -463,7 +509,6 @@ $('fecha-actual').dataset.iso=today.toISOString().split('T')[0];
 $('add-gasto-btn').onclick=()=>addItem('g'); $('add-retiro-btn').onclick=()=>addItem('r');
 $('save-cierre-btn').onclick=window.saveCierre;
 $('edit-modal-cancel-btn').onclick=()=>$('edit-modal').style.display='none';
-// Modificación V24: El botón ⚙️ siempre muestra el modal para introducir la ID a sincronizar.
 $('sync-btn').onclick=()=>{$('sync-modal').style.display='flex';$('sync-id-input').value='';};
 $('sync-modal-save-btn').onclick=()=>{localStorage.setItem(MASTER_KEY,$('sync-id-input').value);location.reload();};
 $('sync-modal-cancel-btn').onclick=()=>$('sync-modal').style.display='none';
