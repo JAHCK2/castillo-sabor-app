@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v26</title>
+<title>EL CASTILLO DEL SABOR 🏰 v27</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -78,7 +78,7 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1>
-                <p class="text-xs text-indigo-500 font-medium">v26 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+                <p class="text-xs text-indigo-500 font-medium">v27 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
             </div>
             <div id="auth-status" class="text-right flex items-center gap-2">
                 <!-- ID Maestra Visible (Mostrará el ID solo si existe) -->
@@ -104,10 +104,10 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
     <!-- VISTA: CAJA (BITÁCORA) -->
     <!-- Se esconde si no hay ID Maestra y se muestra el mensaje de error -->
     <div id="bitacora-view" class="space-y-3">
-        <!-- MENSAJE DE EMERGENCIA PARA ID (V25) -->
+        <!-- MENSAJE DE EMERGENCIA PARA ID (V27) -->
         <div id="id-emergency-message" class="hidden bg-red-100 p-6 rounded-2xl shadow-xl border-4 border-red-500 space-y-4 text-center">
             <h2 class="text-xl font-extrabold text-red-800">¡ERROR CRÍTICO DE SESIÓN!</h2>
-            <p class="text-sm text-gray-700">El navegador está bloqueando la ID Maestra. Copia el siguiente código de inmediato para sincronizar tus dispositivos.</p>
+            <p class="text-sm text-gray-700">El navegador está bloqueando el guardado de la ID. Copia el siguiente código de inmediato para sincronizar tus dispositivos.</p>
             <div class="bg-white p-4 rounded-xl border border-dashed border-red-400">
                 <span class="text-red-700 text-sm font-bold block mb-1">CÓDIGO ID MAESTRA:</span>
                 <p id="emergency-id-display" class="font-mono text-lg font-extrabold text-indigo-900 break-all select-all">...</p>
