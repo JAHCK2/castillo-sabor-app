@@ -517,10 +517,27 @@ $('add-to-cart-btn').onclick = () => {
     const desc = $('gasto-desc').value;
     const cant = Number($('gasto-cantidad').value) || 1;
     const monto = cleanNum($('gasto-monto').value);
+
     if (!desc || monto <= 0) return;
-    const item = { id: Date.now() + '', desc: desc + (cant > 1 ? ` (x${cant})` : ''), m: monto, cant: cant, h: new Date().toISOString() };
-    shoppingCart.push(item); renderCart();
-    $('gasto-desc').value = ''; $('gasto-monto').value = ''; $('gasto-cantidad').classList.add('hidden'); $('gasto-monto').readOnly = false; $('gasto-search').value = ''; $('gasto-search').focus(); selItem = null;
+
+    const item = {
+        id: Date.now() + '',
+        desc: desc + (cant > 1 ? ` (x${cant})` : ''), 
+        m: monto,
+        cant: cant,
+        h: new Date().toISOString()
+    };
+
+    shoppingCart.push(item);
+    renderCart();
+    
+    $('gasto-desc').value = '';
+    $('gasto-monto').value = '';
+    $('gasto-cantidad').classList.add('hidden');
+    $('gasto-monto').readOnly = false;
+    $('gasto-search').value = '';
+    $('gasto-search').focus();
+    selItem = null;
 };
 
 function renderCart() {
