@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Castillo Sabor">
+<meta name="theme-color" content="#4338ca">
+<link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
+<link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
+<title>EL CASTILLO DEL SABOR 🏰 v52</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; overflow-x: hidden;}
+.app-container{max-width:600px;margin:0 auto; min-height: 100vh; background-color: #f3f4f6; padding-bottom: 150px;}
+
+/* Animaciones */
+.log-item,.producto-item{animation:slideIn .2s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:translateX(0)}}
+
+/* Buscador Flotante Mejorado */
+.search-results-popover{max-height:300px;overflow-y:auto;border:1px solid #e2e8f0;position:absolute;z-index:100;width:100%;background:#fff;box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15); border-radius: 0 0 12px 12px;}
+.search-item{padding:.5rem 0.8rem; cursor:pointer; border-bottom:1px solid #f3f4f6; transition: all 0.1s; display: flex; flex-direction: column; justify-content: center;}
+.search-item:hover, .search-item.active {background-color:#e0e7ff; border-left: 4px solid #4f46e5; padding-left: 0.6rem;} 
+
+/* Navegación */
+.nav-wrapper {display: flex; gap: 4px; overflow-x: auto; padding: 6px; background: white; border-radius: 0 0 12px 12px; border-bottom: 1px solid #e5e7eb; white-space: nowrap; -webkit-overflow-scrolling: touch; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+.nav-btn{flex:1; min-width: 70px; padding:.6rem .4rem;font-size:.75rem;border-radius:.5rem;text-align:center;transition:all 0.2s;font-weight:600;}
+.nav-btn-active{background-color:#4f46e5;color:#fff;box-shadow:0 2px 4px rgba(79,70,229,0.3); transform: translateY(-1px);}
+.nav-btn-inactive{background-color:#fff;color:#6b7280;border:1px solid #f3f4f6;}
+
+.query-shortcut-btn{flex-grow:1;padding:.6rem .2rem;font-size:.75rem;border-radius:.5rem;background-color:#eff6ff;color:#1e40af;font-weight:700; border: 1px solid #dbeafe; cursor: pointer;}
+
+.modal{position:fixed;inset:0;background-color:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:150;padding:1rem;backdrop-filter:blur(2px);}
+
+/* Ocultar flechas input number */
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance:textfield; }
+
+/* Foco suave */
+input:focus, select:focus { background-color: #f0f9ff !important; border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;}
+
+/* Carrito de Compras */
+.shopping-cart-container { border: 2px dashed #cbd5e1; background-color: #f8fafc; }
+.shopping-cart-container.has-items { border: 2px solid #6366f1; background-color: #fff; }
+
+/* Caja Fuerte Card */
+.safe-card {background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); position: relative; overflow: hidden;}
+.safe-card::after {content: "🔐"; position: absolute; right: -10px; top: -10px; font-size: 100px; opacity: 0.05; transform: rotate(15deg);}
+
+@media print{body>*{display:none!important}#app-wrapper{display:block!important;position:absolute;top:0;left:0;width:100%;margin:0;padding:0;background:white!important}.no-print{display:none!important}#reporte-resultados-wrapper{display:block!important;box-shadow:none!important;border:none!important}#reporte-resultados,.bg-white{background-color:#fff!important;color:#000!important;border:none!important}body.print-receipt{width:80mm}body.print-receipt #app-wrapper{width:80mm}body.print-receipt .log-item{border-bottom:1px dashed #000;font-size:12px}}
+</style>
+</head>
+<body class="bg-gray-100 text-gray-900 select-none">
+
+<div id="firebase-error-modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[200] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border-b-4 border-red-500">
+        <div class="text-5xl">⚠️</div>
+        <h2 class="text-xl font-bold text-red-600">Error de Sistema</h2>
+        <p class="text-gray-600 text-sm">Hubo un problema iniciando la base de datos.</p>
+        <div class="bg-red-50 p-3 rounded text-left text-xs text-red-800 border border-red-200 font-mono" id="firebase-error-text"></div>
+        <button onclick="location.reload()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-bold mt-3 hover:bg-black transition">Reintentar</button>
+    </div>
+</div>
+
+<div id="edit-modal" class="modal">
+    <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-xs space-y-4">
+        <h3 class="text-lg font-bold text-gray-800">Editar Monto</h3>
+        <p id="edit-modal-desc" class="text-sm text-gray-500 font-medium">...</p>
+        <input type="text" inputmode="numeric" id="edit-modal-monto" class="money-input block w-full px-4 py-3 border-2 border-indigo-100 rounded-xl text-lg font-bold text-center focus:border-indigo-500 outline-none" onfocus="this.select()">
+        <div class="flex gap-3"><button id="edit-modal-cancel-btn" class="flex-1 py-2 bg-gray-100 rounded-xl font-bold text-gray-600">Cancelar</button><button id="edit-modal-save-btn" class="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Guardar</button></div>
+    </div>
+</div>
+
+<div id="sync-modal" class="modal">
+    <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-xs space-y-4">
+        <div class="flex items-center gap-2 text-indigo-600"><span class="text-2xl">☁️</span><h3 class="text-lg font-bold">Sincronizar</h3></div>
+        <p class="text-gray-500 text-xs">ID Maestro del dispositivo principal:</p>
+        <input type="text" id="sync-id-input" class="block w-full px-3 py-2 border-2 border-gray-200 rounded-lg font-mono text-center text-sm focus:border-indigo-500 outline-none" placeholder="Pegar ID aquí">
+        <div class="flex gap-3"><button id="sync-modal-cancel-btn" class="flex-1 py-2 bg-gray-100 rounded-xl font-bold text-gray-600">Cerrar</button><button id="sync-modal-save-btn" class="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Conectar</button></div>
+    </div>
+</div>
+
+<div id="app-wrapper" class="app-container p-3 pb-24">
+    <header class="mb-2 no-print flex flex-col gap-1">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <!-- Logo -->
+                <img src="LOGO.png" alt="Logo" class="h-10 w-auto object-contain" onerror="this.style.display='none'">
+                <div>
+                    <h1 class="text-xl font-extrabold text-indigo-900 tracking-tight leading-tight">EL CASTILLO<br>DEL SABOR</h1>
+                    <p class="text-[10px] text-indigo-500 font-medium">v52 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
+                </div>
+            </div>
+            <div id="auth-status" class="text-right flex items-center gap-2">
+                <div class="flex flex-col items-end"><div id="sync-status-msg" class="hidden inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded-full mb-1">● ONLINE</div><span id="user-id-full" class="font-mono text-[10px] text-gray-500 bg-white px-1 rounded border border-gray-100">...</span></div>
+                <button id="sync-btn" class="w-8 h-8 flex items-center justify-center text-lg bg-white border border-indigo-100 text-indigo-600 rounded-lg shadow-sm active:scale-95">⚙️</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="nav-wrapper mb-4 no-print sticky top-0 z-40">
+        <button id="goto-bitacora-btn" class="nav-btn nav-btn-active">💰 Caja Diario</button>
+        <button id="goto-caja-fuerte-btn" class="nav-btn nav-btn-inactive">🔐 Caja Fuerte</button>
+        <button id="goto-productos-btn" class="nav-btn nav-btn-inactive">📋 Prod</button>
+        <button id="goto-empleados-btn" class="nav-btn nav-btn-inactive">👷 Emp</button>
+        <button id="goto-resumenes-btn" class="nav-btn nav-btn-inactive">📊 Report</button>
+    </div>
+
+    <!-- VISTA CAJA DIARIA -->
+    <div id="bitacora-view" class="space-y-3">
+        <form id="cierre-form" class="space-y-3">
+            <section class="bg-white p-3 rounded-2xl shadow-sm border border-indigo-50 no-print relative">
+                <div class="flex items-center justify-between mb-2"><h2 class="text-sm font-extrabold text-indigo-900 uppercase tracking-wide">1. Compras / Nómina (Salidas de Caja)</h2><span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">Diario</span></div>
+                
+                <div class="relative mb-3">
+                    <input type="text" id="gasto-search" placeholder="🔍 Buscar producto / empleado (Flechas)..." class="w-full pl-9 px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all" autocomplete="off">
+                    <span class="absolute left-3 top-3 text-gray-400 text-base">⚡</span>
+                    <div id="search-results" class="hidden search-results-popover rounded-xl shadow-xl"></div>
+                </div>
+                
+                <div class="flex gap-2 items-stretch">
+                    <div class="flex-[2] flex flex-col gap-1 min-w-0">
+                        <input type="text" id="gasto-desc" placeholder="Descripción" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:border-indigo-500 outline-none font-medium">
+                    </div>
+                    <input type="text" inputmode="numeric" id="gasto-monto" placeholder="$0" class="money-input w-24 px-2 py-2 border border-gray-200 rounded-xl text-base font-bold text-gray-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 outline-none text-right">
+                    <input type="number" id="gasto-cantidad" placeholder="#" class="w-12 px-1 py-2 border-2 border-indigo-100 rounded-xl text-lg font-extrabold text-center text-indigo-600 hidden bg-indigo-50 focus:border-indigo-500 focus:bg-white outline-none transition-colors" min="1">
+                    <button type="button" id="add-to-cart-btn" class="w-12 bg-blue-600 text-white rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg shadow-blue-200 active:scale-95 transition-transform text-2xl font-bold pb-1">⬇</button>
+                </div>
+
+                <div id="shopping-cart" class="mt-3 shopping-cart-container rounded-xl p-3 hidden">
+                    <div class="flex justify-between items-center mb-2 border-b border-gray-200 pb-1">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase">🛒 Lista de Compra</h3>
+                        <button type="button" id="clear-cart-btn" class="text-[10px] text-red-500 font-bold hover:underline">Borrar Todo</button>
+                    </div>
+                    <div id="cart-items" class="space-y-1 text-sm"></div>
+                    <div class="flex justify-between items-center mt-3 pt-2 border-t border-gray-300">
+                        <span class="font-bold text-gray-700">Total Parcial:</span>
+                        <span id="cart-total" class="font-extrabold text-indigo-700 text-xl">$0</span>
+                    </div>
+                    <button type="button" id="commit-cart-btn" class="w-full mt-3 py-3 bg-green-500 text-white rounded-xl font-bold shadow-md active:scale-[0.98] transition-transform flex justify-center items-center gap-2">
+                        <span>✅</span> REGISTRAR
+                    </button>
+                </div>
+            </section>
+            
+            <div class="px-3 pb-2">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Historial del Día (Caja Menor)</h3>
+                <div id="lista-gastos" class="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar"></div>
+            </div>
+
+            <section class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 no-print">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">2. Retiros de Caja</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="retiro-desc" placeholder="Motivo del retiro..." class="flex-[2] min-w-0 px-3 py-2.5 border border-gray-200 rounded-xl text-sm">
+                    <input type="text" inputmode="numeric" id="retiro-monto" placeholder="$0" class="money-input flex-1 min-w-0 px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-right">
+                    <button type="button" id="add-retiro-btn" class="w-12 bg-red-50 text-red-500 border border-red-100 rounded-xl flex-shrink-0 flex items-center justify-center text-xl font-bold hover:bg-red-100 transition-colors">-</button>
+                </div>
+                <div id="lista-retiros" class="mt-3 space-y-1"></div>
+            </section>
+
+            <section class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 no-print">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">3. Arqueo de Caja</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-100"><label class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Base Fija</label><div id="base-fija-display" class="text-xl font-bold text-gray-700 mt-1">$ 200.000</div></div>
+                    <div class="bg-white p-0 rounded-lg"><label class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1 block">Efectivo Real</label><input type="text" inputmode="numeric" id="efectivo-final" class="money-input w-full px-3 py-2 border-2 border-green-100 rounded-xl text-xl font-bold text-green-700 bg-green-50 focus:bg-white focus:border-green-500 outline-none transition-colors" placeholder="$0"></div>
+                    <div class="col-span-2"><label class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1 block">Pagos Digitales (Nequi/Daviplata)</label><input type="text" inputmode="numeric" id="pagos-digitales" class="money-input w-full px-3 py-2 border-2 border-purple-100 rounded-xl text-xl font-bold text-purple-700 bg-purple-50 focus:bg-white focus:border-purple-500 outline-none transition-colors" placeholder="$0"></div>
+                </div>
+            </section>
+
+            <section class="bg-gray-900 text-white p-5 rounded-2xl shadow-xl no-print text-sm relative overflow-hidden mt-2">
+                <div class="space-y-2 relative z-10">
+                    <div class="flex justify-between text-gray-400 text-base"><span>Total Gastos (Caja):</span><span id="resumen-gastos" class="text-red-300 font-mono font-bold text-xl">$ 0</span></div>
+                    <div class="flex justify-between text-gray-400 text-base"><span>Total Retiros:</span><span id="resumen-retiros" class="text-blue-300 font-mono font-bold text-xl">$ 0</span></div>
+                    <div class="h-px bg-gray-700 my-3 opacity-50"></div>
+                    <div class="flex justify-between text-lg"><span>Ventas Efectivo:</span><span id="resumen-ventas-efectivo" class="text-green-400 font-mono font-bold text-2xl">$ 0</span></div>
+                    <div class="flex justify-between text-lg"><span>Ventas Digitales:</span><span id="resumen-ventas-digital" class="text-purple-400 font-mono font-bold text-2xl">$ 0</span></div>
+                    <div class="flex justify-between items-end mt-4 pt-4 border-t border-gray-700"><span class="font-bold text-gray-400 pb-1 text-sm uppercase tracking-widest">VENTA TOTAL</span><span id="resumen-venta-total" class="text-5xl font-extrabold text-white tracking-tight">$ 0</span></div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-2"><span>Ganancia Neta:</span><span id="resumen-ganancia-neta" class="text-lg">$ 0</span></div>
+                </div>
+            </section>
+            <button type="button" id="save-cierre-btn" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-bold shadow-lg active:scale-[0.98] transition-transform no-print flex justify-center items-center gap-2 text-lg mt-2"><span>💾</span> Guardar Cierre del Día</button>
+            <p id="save-message" class="text-center text-green-600 text-sm font-bold h-5 no-print"></p>
+        </form>
+    </div>
+
+    <!-- VISTA CAJA FUERTE (NUEVA) -->
+    <div id="caja-fuerte-view" class="hidden space-y-4 mt-3">
+        <div class="safe-card">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dinero Acumulado</h3>
+            <div class="flex items-baseline gap-2">
+                <span class="text-4xl font-extrabold tracking-tight" id="safe-balance">$ 0</span>
+            </div>
+            <p class="text-[10px] text-gray-400 mt-2">Este es el dinero real disponible en la caja fuerte.</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <h3 class="font-bold text-gray-800 mb-3">Registrar Movimiento Mayor</h3>
+            <div class="flex gap-2 mb-3">
+                <button type="button" class="flex-1 py-2 rounded-xl font-bold text-sm bg-green-100 text-green-700 border border-green-200 cf-type-btn transition-colors" data-type="ingreso">⬇ Ingreso / Aporte</button>
+                <button type="button" class="flex-1 py-2 rounded-xl font-bold text-sm bg-white text-gray-500 border border-gray-200 cf-type-btn transition-colors" data-type="egreso">⬆ Gasto / Retiro</button>
+            </div>
+            <!-- CAMBIO: Foco al abrir la pestaña -->
+            <input type="text" id="cf-desc" placeholder="Motivo (ej: Pago Arriendo, Retiro Socio)" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none mb-2">
+            <div class="flex gap-2">
+                <select id="cf-categoria" class="flex-1 px-3 py-3 border border-gray-200 rounded-xl text-sm bg-white outline-none">
+                    <option>General</option><option>Arriendo</option><option>Servicios</option><option>Personal</option><option>Proveedores</option>
+                </select>
+                <input type="text" inputmode="numeric" id="cf-monto" placeholder="$0" class="money-input flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-700 outline-none">
+            </div>
+            <button id="save-cf-mov-btn" class="w-full mt-3 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md active:scale-[0.98]">Registrar Movimiento</button>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Historial Caja Fuerte</h3>
+            <div id="cf-history-list" class="space-y-2 text-sm max-h-60 overflow-y-auto custom-scrollbar"></div>
+        </div>
+    </div>
+
+    <!-- VISTA PRODUCTOS -->
+    <div id="productos-view" class="hidden space-y-3 mt-2">
+        <form id="producto-form" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+            <div class="flex justify-between items-center"><h3 id="producto-form-title" class="font-bold text-gray-800">Gestionar Productos</h3><button type="button" id="clear-producto-form-btn" class="text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg hover:bg-gray-100">Limpiar</button></div>
+            <input type="hidden" id="producto-id">
+            <!-- Buscador con Foco -->
+            <div class="relative"><input type="text" id="producto-manage-search" placeholder="🔎 Buscar para editar (Flechas/Enter)..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"><div id="producto-manage-search-results" class="hidden search-results-popover rounded-lg shadow-lg"></div></div>
+            
+            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                <input type="text" id="producto-nombre" placeholder="Nombre del producto" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 bg-white outline-none focus:border-indigo-500" required>
+                
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Precio y Tipo</label>
+                    <div class="flex gap-3">
+                        <select id="producto-tipo" class="w-1/3 px-3 py-3 border border-gray-200 rounded-xl text-sm bg-white outline-none"><option value="variable">Precio Variable</option><option value="fijo">Precio Fijo</option></select>
+                        <input type="text" inputmode="numeric" id="producto-precio" placeholder="$ Precio" class="money-input w-2/3 px-4 py-3 border border-gray-200 rounded-xl text-sm font-bold bg-white outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-xs font-bold text-gray-400 uppercase mt-2 tracking-wide">Proveedores</div>
+            <div id="proveedores-en-formulario-lista" class="text-xs space-y-2 bg-white border border-gray-100 rounded-xl p-2 min-h-[40px]"></div>
+            <div class="flex gap-2"><input id="prov-nom" placeholder="Nombre Prov." class="flex-[2] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"><input id="prov-tel" placeholder="Teléfono" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"><button type="button" id="add-proveedor-btn" class="bg-blue-50 text-blue-600 px-4 rounded-lg font-bold hover:bg-blue-100">+</button></div>
+            <div class="flex gap-3 mt-2 pt-2 border-t border-gray-100"><button type="button" id="delete-producto-btn" class="hidden w-12 bg-red-50 text-red-500 rounded-xl font-bold hover:bg-red-100 text-xl">×</button><button type="submit" id="save-producto-btn" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold shadow-sm active:bg-green-700">Guardar Cambios</button></div>
+            <p id="producto-save-message" class="text-center text-sm text-green-600 h-4"></p>
+        </form>
+        <div id="lista-productos" class="mt-4 space-y-2 text-sm pb-10"></div>
+    </div>
+
+    <!-- VISTA EMPLEADOS -->
+    <div id="empleados-view" class="hidden space-y-3 mt-2">
+        <form id="empleado-form" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+            <h3 id="empleado-form-title" class="font-bold text-gray-800">Nómina / Empleados</h3>
+            <input type="hidden" id="empleado-id">
+            <input type="text" id="empleado-nombre" placeholder="Nombre del empleado" class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-indigo-500" required>
+            <input type="text" inputmode="numeric" id="empleado-sueldo" placeholder="Sueldo Diario ($)" class="money-input w-full px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-700 outline-none focus:border-indigo-500">
+            <div class="flex gap-3"><button type="button" id="cancel-edit-empleado-btn" class="hidden flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold">Cancelar</button><button type="submit" id="save-empleado-btn" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold shadow-sm">Guardar Empleado</button></div>
+            <p id="empleado-save-message" class="text-center text-sm text-green-600 h-4"></p>
+        </form>
+        <div id="lista-empleados" class="mt-4 space-y-2 text-sm"></div>
+    </div>
+
+    <!-- VISTA REPORTES -->
+    <div id="resumenes-view" class="hidden space-y-4 mt-2">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 no-print">
+            <h3 class="font-bold text-gray-800 mb-3">Consultar Historial</h3>
+            <div class="grid grid-cols-4 gap-2 mb-4">
+                <button class="query-shortcut-btn" data-range="today">Hoy</button>
+                <button class="query-shortcut-btn" data-range="this_month">Este Mes</button>
+                <button class="query-shortcut-btn" data-range="last_month">Mes Ant.</button>
+                <button class="query-shortcut-btn" data-range="this_year">Año</button>
+            </div>
+            <div class="flex gap-2 items-center bg-gray-50 p-3 rounded-xl mb-3 border border-gray-100">
+                <input type="date" id="reporte-fecha-inicio" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 w-full text-xs text-gray-600 outline-none">
+                <span class="text-gray-400 font-bold">➞</span>
+                <input type="date" id="reporte-fecha-fin" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 w-full text-xs text-gray-600 outline-none">
+            </div>
+            <button id="query-rango-btn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg active:scale-[0.98] transition-transform">Generar Reporte</button>
+        </div>
+        <div id="reporte-resultados-wrapper" class="hidden space-y-4 pb-12">
+            <h2 id="reporte-resultados-header" class="text-lg font-bold text-center text-gray-800 bg-indigo-50 py-3 rounded-xl border border-indigo-100"></h2>
+            <div class="no-print bg-white p-4 rounded-2xl mb-2 space-y-3 border border-gray-200">
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Opciones de Exportación</div>
+                <div class="flex gap-3">
+                    <button id="print-carta-btn" class="flex-1 bg-white border-2 border-blue-100 text-blue-600 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors">📄 Carta PDF</button>
+                    <button id="print-recibo-btn" class="flex-1 bg-gray-800 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-gray-900 transition-colors">🧾 Recibo Tira</button>
+                </div>
+            </div>
+            <div id="print-section-resumen" class="bg-gray-900 text-white p-5 rounded-2xl shadow-md"><h4 class="text-xs text-gray-400 uppercase mb-3 tracking-widest border-b border-gray-700 pb-1">Balance del Período</h4><div id="reporte-resultados" class="space-y-1"></div></div>
+            <div id="print-section-analisis" class="bg-white p-4 rounded-2xl border border-gray-200"><h3 class="font-bold mb-3 text-indigo-900 border-b pb-2 text-sm uppercase tracking-wide">🏆 Top Gastos</h3><div id="reporte-analisis-gastos" class="space-y-2"></div></div>
+            <div id="print-section-detalle" class="bg-white p-4 rounded-2xl border border-gray-200"><h3 class="font-bold mb-3 text-indigo-900 border-b pb-2 text-sm uppercase tracking-wide">📝 Detalle de Movimientos</h3><div id="reporte-detalle-movimientos" class="space-y-1 max-h-96 overflow-y-auto custom-scrollbar"></div></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, onSnapshot, collection, query, where, writeBatch, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCFsgLCSCnpbY77NqoaXHzG5HrmCfqlRVE",
+  authDomain: "castillo-sabor-app.firebaseapp.com",
+  projectId: "castillo-sabor-app",
+  storageBucket: "castillo-sabor-app.firebasestorage.app",
+  messagingSenderId: "485212277264",
+  appId: "1:485212277264:web:2f7068625535fc1d261895"
+};
+
+const appId = 'castillo-sabor-prod';
+const BASE = 200000;
+const MASTER_KEY = 'masterUserId';
+
+const PRE_GASTOS = [{nombre:"Naranjas",tipo:"variable"},{nombre:"Buñuelos",tipo:"fijo",precio:1000},{nombre:"Carne",tipo:"variable"},{nombre:"Pollo",tipo:"variable"},{nombre:"Verduras",tipo:"variable"},{nombre:"Mora",tipo:"variable"},{nombre:"Avena",tipo:"fijo",precio:5000},{nombre:"Servilletas",tipo:"fijo",precio:3000},{nombre:"Bolsas",tipo:"fijo",precio:2000},{nombre:"Jabón",tipo:"fijo",precio:6000},{nombre:"Cloro",tipo:"fijo",precio:4000},{nombre:"Café",tipo:"variable"},{nombre:"Azúcar",tipo:"fijo",precio:4500},{nombre:"Queso",tipo:"variable"},{nombre:"Harina Trigo",tipo:"fijo",precio:4500},{nombre:"Harina Maíz",tipo:"fijo",precio:4200},{nombre:"Sal",tipo:"fijo",precio:1500},{nombre:"Leche",tipo:"fijo",precio:4800},{nombre:"Huevos",tipo:"variable"},{nombre:"Vasos",tipo:"fijo",precio:3000}];
+
+let db,auth,userId,activeId,colCierres,colProd,colEmp,colCajaFuerte;
+let subReporte,subHist,subProd,subEmp, subCajaFuerte;
+let localProd=[],localEmp=[],gastos=[],retiros=[],curProv=[], localCF=[];
+let selItem=null,seeding=false,curCat="Todos";
+let currentFocus = -1; 
+// CARRITO DE COMPRAS
+let shoppingCart = [];
+// Caja Fuerte
+let cfType = 'ingreso';
+
+const $ = id => document.getElementById(id);
+const fmtNum = n => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n||0);
+const cleanNum = str => {
+    if(!str) return 0;
+    return Number(str.toString().replace(/[^0-9]/g, ''));
+};
+const formatMoneyInput = (val) => {
+    if(val === '') return '';
+    const n = cleanNum(val);
+    return new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP', minimumFractionDigits: 0}).format(n);
+}
+
+const fmtTime = d => new Date(d).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'});
+const norm = s => s?s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase():'';
+
+async function init(){
+    try {
+        const app=initializeApp(firebaseConfig); 
+        db=getFirestore(app); 
+        auth=getAuth(app);
+        
+        const today = new Date();
+        const isoDate = today.toISOString().split('T')[0];
+        $('fecha-actual').textContent = today.toLocaleDateString('es-CO');
+        $('fecha-actual').dataset.iso = isoDate;
+
+        await signInAnonymously(auth).catch(err => {
+            console.error("Error Auth", err);
+            if(document.getElementById('firebase-error-text')) document.getElementById('firebase-error-text').textContent = err.message;
+            if(document.getElementById('firebase-error-modal')) document.getElementById('firebase-error-modal').classList.remove('hidden');
+        });
+
+        onAuthStateChanged(auth,u=>{
+            if(u){
+                let storedId = localStorage.getItem(MASTER_KEY);
+                if (!storedId) { storedId = u.uid; localStorage.setItem(MASTER_KEY, storedId); }
+                activeId = storedId;
+                if($('user-id-full')) $('user-id-full').textContent = activeId; 
+                if($('sync-status-msg')) $('sync-status-msg').classList.remove('hidden');
+                const path=`artifacts/${appId}/users/${activeId}`;
+                colCierres=collection(db,`${path}/cierres_v2`); colProd=collection(db,`${path}/productos`);
+                colEmp=collection(db,`${path}/empleados`);
+                colCajaFuerte=collection(db,`${path}/caja_fuerte`);
+                
+                // Auto focus
+                setTimeout(() => { 
+                    if(!$('gasto-search').value) $('gasto-search').focus(); 
+                }, 500);
+
+                setupSubs(isoDate);
+            }
+        });
+    } catch(e) { console.error(e); }
+}
+
+function setupSubs(currentIsoDate){
+    if(subReporte)subReporte();
+    const docId = currentIsoDate || $('fecha-actual').dataset.iso || new Date().toISOString().split('T')[0];
+    subReporte=onSnapshot(doc(colCierres, docId), s=>{
+        const d=s.data()||{}; 
+        if($('efectivo-final')) $('efectivo-final').value=d.ef ? formatMoneyInput(d.ef) : ''; 
+        if($('pagos-digitales')) $('pagos-digitales').value=d.dig ? formatMoneyInput(d.dig) : '';
+        gastos=d.gastos||[]; retiros=d.retiros||[]; renderBitacora();
+    });
+    if(subProd)subProd();
+    subProd=onSnapshot(query(colProd),async s=>{
+        localProd=[]; s.forEach(d=>localProd.push({id:d.id,...d.data()}));
+        if(!localProd.length && !seeding){seeding=true;const b=writeBatch(db);PRE_GASTOS.forEach(p=>b.set(doc(colProd),p));await b.commit();}
+        renderProd();
+    });
+    if(subEmp)subEmp();
+    subEmp=onSnapshot(query(colEmp),s=>{localEmp=[];s.forEach(d=>localEmp.push({id:d.id,...d.data()}));renderEmp();});
+    
+    // Caja Fuerte Sub
+    if(subCajaFuerte) subCajaFuerte();
+    subCajaFuerte=onSnapshot(query(colCajaFuerte, orderBy('h', 'desc'), limit(50)), s=>{
+        localCF=[]; s.forEach(d=>localCF.push({id:d.id,...d.data()}));
+        renderCajaFuerte();
+    }, err => {}); 
+
+    if(subHist)subHist();
+    subHist=onSnapshot(query(colCierres),s=>{let h=[];s.forEach(d=>h.push({id:d.id,...d.data()}));
+        if($('historial-lista')) $('historial-lista').innerHTML=h.sort((a,b)=>b.id.localeCompare(a.id)).slice(0,5).map(r=>`<div class="bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center"><span class="font-mono text-gray-500">${r.id.slice(5)}</span><span class="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md">${fmtNum(r.neto)}</span></div>`).join('');
+    });
+}
+
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('money-input')) {
+        const start = e.target.selectionStart;
+        const initialLen = e.target.value.length;
+        e.target.value = formatMoneyInput(e.target.value);
+        const newLen = e.target.value.length;
+        try { e.target.setSelectionRange(start + (newLen - initialLen), start + (newLen - initialLen)); } catch(err){}
+    }
+});
+
+function renderBitacora(){
+    if(!$('lista-gastos')) return;
+    const ef=cleanNum($('efectivo-final').value), dig=cleanNum($('pagos-digitales').value);
+    const tg=gastos.reduce((s,i)=>s+i.m,0), tr=retiros.reduce((s,i)=>s+i.m,0);
+    const venEf=(ef-BASE)+tg+tr; const tot=(venEf>0?venEf:0)+dig;
+    
+    $('lista-gastos').innerHTML=gastos.map(g=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${g.desc}</span><span class="text-[10px] text-gray-400">${fmtTime(g.h)}</span></div><div class="flex items-center gap-2"><span class="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">${fmtNum(g.m)}</span><button onclick="window.editItem('${g.id}','g')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${g.id}','g')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    $('lista-retiros').innerHTML=retiros.map(r=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${r.desc}</span></div><div class="flex items-center gap-2"><span class="font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">${fmtNum(r.m)}</span><button onclick="window.editItem('${r.id}','r')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${r.id}','r')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    
+    if($('resumen-gastos')) $('resumen-gastos').textContent=fmtNum(tg); 
+    if($('resumen-retiros')) $('resumen-retiros').textContent=fmtNum(tr);
+    if($('resumen-ventas-efectivo')) $('resumen-ventas-efectivo').textContent=fmtNum(venEf>0?venEf:0); 
+    if($('resumen-ventas-digital')) $('resumen-ventas-digital').textContent=fmtNum(dig);
+    if($('resumen-venta-total')) $('resumen-venta-total').textContent=fmtNum(tot); 
+    if($('resumen-ganancia-neta')) $('resumen-ganancia-neta').textContent=fmtNum(tot-tg);
+}
+
+window.saveCierre=async()=>{
+    const ef=cleanNum($('efectivo-final').value), dig=cleanNum($('pagos-digitales').value);
+    const tg=gastos.reduce((s,i)=>s+i.m,0), tr=retiros.reduce((s,i)=>s+i.m,0);
+    const venEf=(ef-BASE)+tg+tr; const tot=(venEf>0?venEf:0)+dig;
+    await setDoc(doc(colCierres,$('fecha-actual').dataset.iso),{ef,dig,gastos,retiros,tg,tr,venEf:venEf>0?venEf:0,tot,neto:tot-tg},{merge:true});
+    if($('save-message')) { $('save-message').textContent="✓ Guardado"; setTimeout(()=>$('save-message').textContent="",2500); }
+};
+
+$('efectivo-final').oninput=()=>{ renderBitacora(); window.saveCierre(); };
+$('pagos-digitales').oninput=()=>{ renderBitacora(); window.saveCierre(); };
+
+// LÓGICA CARRITO DE COMPRAS (MODO CHUCHO)
+$('add-to-cart-btn').onclick = () => {
+    const desc = $('gasto-desc').value;
+    const cant = Number($('gasto-cantidad').value) || 1;
+    const monto = cleanNum($('gasto-monto').value);
+
+    if (!desc || monto <= 0) return;
+
+    const item = {
+        id: Date.now() + '',
+        desc: desc + (cant > 1 ? ` (x${cant})` : ''), // Info cantidad en descripcion
+        m: monto,
+        cant: cant, // Guardamos por si acaso
+        h: new Date().toISOString()
+    };
+
+    shoppingCart.push(item);
+    renderCart();
+    
+    // Limpiar inputs y volver al buscador
+    $('gasto-desc').value = '';
+    $('gasto-monto').value = '';
+    $('gasto-cantidad').classList.add('hidden');
+    $('gasto-monto').readOnly = false;
+    $('gasto-search').value = '';
+    $('gasto-search').focus();
+    selItem = null;
+};
+
+function renderCart() {
+    const cartContainer = $('shopping-cart');
+    const cartList = $('cart-items');
+    const cartTotal = $('cart-total');
+    
+    if (shoppingCart.length > 0) {
+        cartContainer.classList.remove('hidden');
+        cartContainer.classList.add('has-items'); // Borde azul
+        
+        let total = 0;
+        cartList.innerHTML = shoppingCart.map((item, index) => {
+            total += item.m;
+            return `<div class="flex justify-between items-center border-b border-gray-200 py-1">
+                <div class="flex gap-2 items-center flex-1 min-w-0">
+                    <span class="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded font-bold">x${item.cant}</span>
+                    <span class="truncate font-medium text-gray-700">${item.desc.replace(/ \(x\d+\)/, '')}</span>
+                </div>
+                <span class="font-bold text-gray-900 mr-2 text-sm">${fmtNum(item.m)}</span>
+                <button onclick="removeFromCart(${index})" class="text-red-500 font-bold px-1 hover:bg-red-50 rounded">✕</button>
+            </div>`;
+        }).join('');
+        
+        cartTotal.textContent = fmtNum(total);
+    } else {
+        cartContainer.classList.add('hidden');
+    }
+}
+
+window.removeFromCart = (index) => {
+    shoppingCart.splice(index, 1);
+    renderCart();
+};
+
+$('clear-cart-btn').onclick = () => {
+    if(confirm('¿Borrar lista de compra?')) {
+        shoppingCart = [];
+        renderCart();
+    }
+};
+
+$('commit-cart-btn').onclick = () => {
+    if (shoppingCart.length === 0) return;
+    // Agregar todo al gasto real
+    shoppingCart.forEach(item => gastos.push(item));
+    
+    // Limpiar carrito
+    shoppingCart = [];
+    renderCart();
+    
+    // Guardar en Firebase
+    renderBitacora();
+    window.saveCierre();
+    alert('✅ Compra registrada exitosamente');
+};
+
+// Enter en monto del carrito -> Agregar al carrito
+$('gasto-monto').addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { 
+        e.preventDefault(); 
+        $('add-to-cart-btn').click(); 
+    }
+});
+
+// Enter en cantidad -> Agregar al carrito
+$('gasto-cantidad').addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { 
+        e.preventDefault(); 
+        $('add-to-cart-btn').click(); 
+    }
+});
+
+// Logica anterior (add simple) - Mantenemos por compatibilidad si alguien usa el boton + viejo, aunque lo oculte visualmente
+window.addItem=(type)=>{
+    if (type === 'r') {
+        const desc=$('retiro-desc').value;
+        const m=cleanNum($('retiro-monto').value);
+        if(!desc||m<=0)return;
+        retiros.push({id:Date.now()+'',desc,m,h:new Date().toISOString()});
+        $('retiro-desc').value='';$('retiro-monto').value='';
+        renderBitacora(); window.saveCierre();
+    }
+};
+// Boton Retiro
+$('add-retiro-btn').onclick = () => addItem('r');
+
+window.delItem=(id,type)=>{if(type==='g')gastos=gastos.filter(i=>i.id!=id);else retiros=retiros.filter(i=>i.id!=id);renderBitacora();window.saveCierre();};
+window.editItem=(id,type)=>{
+    const item=(type==='g'?gastos:type==='r'?retiros:localGen).find(i=>i.id===id); // localGen eliminado, ajustamos
+    const found = gastos.find(i=>i.id===id) || retiros.find(i=>i.id===id);
+    if(!found)return;
+    
+    $('edit-modal').style.display='flex';$('edit-modal').dataset.id=id;$('edit-modal').dataset.type=type;
+    $('edit-modal-desc').textContent=found.desc;
+    $('edit-modal-monto').value=formatMoneyInput(found.m);
+    setTimeout(()=> { $('edit-modal-monto').focus(); $('edit-modal-monto').select(); }, 50);
+};
+
+$('edit-modal-save-btn').onclick=async()=>{
+    const id=$('edit-modal').dataset.id, type=$('edit-modal').dataset.type, m=cleanNum($('edit-modal-monto').value);
+    // Solo gastos y retiros
+    const l=type==='g'?gastos:retiros;const i=l.find(x=>x.id===id);if(i)i.m=m;renderBitacora();window.saveCierre();
+    $('edit-modal').style.display='none';
+};
+
+function addActive(x) {
+    if (!x) return false;
+    removeActive(x);
+    if (currentFocus >= x.length) currentFocus = 0;
+    if (currentFocus < 0) currentFocus = (x.length - 1);
+    x[currentFocus].classList.add("active");
+    x[currentFocus].scrollIntoView({ block: 'nearest' });
+}
+function removeActive(x) { for (let i = 0; i < x.length; i++) x[i].classList.remove("active"); }
+
+// EVENTOS DE TECLADO MEJORADOS (v51)
+const gastoSearch = $('gasto-search');
+gastoSearch.addEventListener("keydown", function(e) {
+    let x = document.querySelectorAll("#search-results .search-item");
+    if (e.key === "ArrowDown") { 
+        if (x.length === 0) { // Si lista cerrada y flecha abajo -> ABRIR
+             gastoSearch.dispatchEvent(new Event('input'));
+        }
+        currentFocus++; addActive(x); 
+    } 
+    else if (e.key === "ArrowUp") { currentFocus--; addActive(x); } 
+    else if (e.key === "Enter") { e.preventDefault(); if (currentFocus > -1 && x && x[currentFocus]) x[currentFocus].click(); }
+});
+
+// LÓGICA DE BÚSQUEDA BLINDADA
+gastoSearch.addEventListener('focus', function() {
+    // Al enfocar, si está vacío, mostramos todo
+    if(!this.value) {
+        this.value = ''; // Truco para disparar evento
+        this.dispatchEvent(new Event('input'));
+    }
+});
+
+gastoSearch.oninput=(e)=>{
+    const val = e.target.value;
+    const q=norm(val), res=$('search-results'); res.innerHTML=''; currentFocus = -1;
+    
+    // CAMBIO v51: Si vacío, NO ocultar, mostrar TODO
+    const showAll = val === '';
+    
+    const combinedList = [
+        ...localProd.map(p=>({...p,l:p.nombre})),
+        ...localEmp.map(e=>({...e,l:`Nómina: ${e.nombre}`,tipo:'nomina',precio:e.sueldo}))
+    ];
+
+    const filtered = showAll ? combinedList : combinedList.filter(x=>norm(x.l).includes(q));
+
+    if (filtered.length === 0 && !showAll) {
+         res.classList.add('hidden'); 
+         return;
+    }
+    
+    // Renderizar lista
+    filtered.forEach(x=>{
+        const d=document.createElement('div'); d.className='search-item'; 
+        let cat = '';
+        if (x.tipo === 'nomina') cat = 'Empleado';
+        else cat = x.tipo === 'fijo' ? 'Precio Fijo' : 'Precio Variable';
+
+        const priceDisplay = x.precio ? fmtNum(x.precio) : '';
+        
+        d.innerHTML=`
+            <div class="font-medium text-gray-800 leading-tight text-sm">${x.l}</div>
+            <div class="meta flex gap-2 mt-0.5">
+                <span class="${x.tipo==='nomina'?'text-green-600':'text-indigo-500'} font-bold text-[10px] uppercase">${cat}</span>
+                <span class="font-bold text-gray-500 text-[10px]">${priceDisplay}</span>
+            </div>`;
+            
+        d.onclick=()=>{
+            selItem=x; $('gasto-search').value=''; res.classList.add('hidden');
+            if(x.tipo==='nomina'){
+                gastos.push({id:Date.now()+'',desc:x.l,m:x.precio,h:new Date().toISOString()});renderBitacora();window.saveCierre();
+            } else {
+                $('gasto-desc').value=x.nombre;
+                $('gasto-monto').value=x.precio ? formatMoneyInput(x.precio) : '';
+                
+                if(x.tipo==='fijo'){
+                    $('gasto-cantidad').classList.remove('hidden');
+                    $('gasto-cantidad').value=1; 
+                    $('gasto-monto').readOnly=true;
+                    setTimeout(() => { $('gasto-cantidad').focus(); $('gasto-cantidad').select(); }, 100);
+                } else {
+                    $('gasto-cantidad').classList.add('hidden');
+                    $('gasto-monto').readOnly=false;
+                    setTimeout(() => { $('gasto-monto').focus(); $('gasto-monto').select(); }, 100);
+                }
+            }
+        }; res.appendChild(d);
+    });
+    
+    res.classList.remove('hidden');
+};
+
+$('gasto-cantidad').addEventListener('input', function() {
+    if (selItem && selItem.tipo === 'fijo') {
+        const cant = Number(this.value);
+        if(cant < 1) this.value = 1; 
+        $('gasto-monto').value = formatMoneyInput(Number(this.value) * selItem.precio);
+    }
+});
+
+let prodFocus = -1;
+$('producto-manage-search').addEventListener("keydown", function(e) {
+    let x = document.querySelectorAll("#producto-manage-search-results .search-item");
+    if (e.key === "ArrowDown") { prodFocus++; addActiveProd(x); } 
+    else if (e.key === "ArrowUp") { prodFocus--; addActiveProd(x); } 
+    else if (e.key === "Enter") { e.preventDefault(); if (prodFocus > -1 && x && x[prodFocus]) x[prodFocus].click(); }
+});
+
+function addActiveProd(x) {
+    if (!x) return false;
+    for (let i = 0; i < x.length; i++) x[i].classList.remove("active");
+    if (prodFocus >= x.length) prodFocus = 0;
+    if (prodFocus < 0) prodFocus = (x.length - 1);
+    x[prodFocus].classList.add("active");
+    x[prodFocus].scrollIntoView({ block: 'nearest' });
+}
+
+$('producto-manage-search').oninput=(e)=>{
+    const q=norm(e.target.value),el=$('producto-manage-search-results');el.innerHTML=''; prodFocus = -1;
+    if(!q){el.classList.add('hidden');return;}
+    localProd.filter(p=>norm(p.nombre).includes(q)).forEach(p=>{
+        const d=document.createElement('div'); d.className='search-item'; d.textContent=p.nombre;
+        d.onclick=()=>{
+            fillProd(p.id); el.classList.add('hidden'); $('producto-manage-search').value='';
+            setTimeout(() => { $('producto-precio').focus(); $('producto-precio').select(); }, 100);
+        }; el.appendChild(d);
+    }); el.classList.remove('hidden');
+};
+
+function renderProd(){$('lista-productos').innerHTML=localProd.map(p=>`<div class="bg-white p-3 border border-gray-100 rounded-xl flex justify-between items-center shadow-sm"><div><span class="font-bold text-gray-800 block">${p.nombre}</span><span class="text-xs text-gray-500">${p.tipo==='fijo'?fmtNum(p.precio):'Variable'}</span></div><button onclick="fillProd('${p.id}')" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
+
+window.fillProd=(id)=>{
+    const p=localProd.find(x=>x.id===id);
+    $('producto-id').value=id;
+    $('producto-nombre').value=p.nombre;
+    $('producto-tipo').value=p.tipo;
+    $('producto-precio').value=formatMoneyInput(p.precio);
+    curProv=p.prov||[];renderProvList();
+    $('producto-form-title').textContent='Editar: '+p.nombre;
+    $('delete-producto-btn').classList.remove('hidden');
+    document.querySelector('#productos-view').scrollIntoView();
+};
+
+window.delProd=async(id)=>{await deleteDoc(doc(colProd,id));$('clear-producto-form-btn').click();};
+
+$('save-producto-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('producto-nombre').value,tipo:$('producto-tipo').value,precio:cleanNum($('producto-precio').value),prov:curProv};const id=$('producto-id').value;if(id)await setDoc(doc(colProd,id),d,{merge:true});else await addDoc(colProd,d);$('clear-producto-form-btn').click();$('producto-save-message').textContent='Guardado';setTimeout(()=>$('producto-save-message').textContent='',2000);};
+
+$('add-proveedor-btn').onclick=()=>{curProv.push({n:$('prov-nom').value,t:$('prov-tel').value});renderProvList();$('prov-nom').value='';$('prov-tel').value='';};
+
+$('clear-producto-form-btn').onclick=()=>{ $('producto-form').reset(); $('producto-id').value=''; $('producto-form-title').textContent='Agregar Producto'; $('delete-producto-btn').classList.add('hidden'); curProv=[]; renderProvList(); };
+
+function renderProvList(){$('proveedores-en-formulario-lista').innerHTML=curProv.map((p,i)=>`<div class="flex justify-between bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs items-center"><span><span class="font-bold">${p.n}</span> (${p.t})</span><button onclick="curProv.splice(${i},1);renderProvList()" class="text-red-400 font-bold px-2">✕</button></div>`).join('');}
+
+$('producto-tipo').onchange=(e)=>{if(e.target.value==='fijo')$('producto-precio-wrapper').classList.remove('hidden');else $('producto-precio-wrapper').classList.add('hidden');};
+
+$('save-empleado-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('empleado-nombre').value,sueldo:cleanNum($('empleado-sueldo').value)};const id=$('empleado-id').value;if(id)await setDoc(doc(colEmp,id),d,{merge:true});else await addDoc(colEmp,d);$('empleado-form').reset();};
+
+function renderEmp(){$('lista-empleados').innerHTML=localEmp.map(e=>`<div class="bg-white p-3 border border-gray-100 rounded-xl shadow-sm flex justify-between items-center"><div><span class="font-bold text-gray-800 block">${e.nombre}</span><span class="text-xs text-gray-500">Diario: ${fmtNum(e.sueldo)}</span></div><button onclick="$('empleado-id').value='${e.id}';$('empleado-nombre').value='${e.nombre}';$('empleado-sueldo').value=formatMoneyInput('${e.sueldo}');" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
+
+// CAJA FUERTE LOGICA
+document.querySelectorAll('.cf-type-btn').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.cf-type-btn').forEach(b => {
+            b.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700', 'border-green-200', 'border-red-200');
+            b.classList.add('bg-white', 'text-gray-500');
+        });
+        cfType = btn.dataset.type;
+        if(cfType === 'ingreso') {
+            btn.classList.add('bg-green-100', 'text-green-700', 'border-green-200');
+        } else {
+            btn.classList.add('bg-red-100', 'text-red-700', 'border-red-200');
+        }
+        btn.classList.remove('bg-white', 'text-gray-500');
+    };
+});
+
+$('save-cf-mov-btn').onclick = async () => {
+    const desc = $('cf-desc').value;
+    const cat = $('cf-categoria').value;
+    const monto = cleanNum($('cf-monto').value);
+    if(!desc || monto <= 0) return;
+    
+    await addDoc(colCajaFuerte, {
+        t: cfType, // 'ingreso' o 'egreso'
+        d: desc,
+        c: cat,
+        m: monto,
+        h: new Date().toISOString()
+    });
+    
+    $('cf-desc').value = '';
+    $('cf-monto').value = '';
+};
+
+function renderCajaFuerte() {
+    // Calcular saldo
+    let saldo = 0;
+    localCF.forEach(mov => {
+        if (mov.t === 'ingreso') saldo += mov.m;
+        else saldo -= mov.m;
+    });
+    if($('safe-balance')) $('safe-balance').textContent = fmtNum(saldo);
+    
+    // Renderizar lista
+    if($('cf-history-list')) $('cf-history-list').innerHTML = localCF.sort((a,b) => b.h.localeCompare(a.h)).map(m => {
+        const isIngreso = m.t === 'ingreso';
+        const color = isIngreso ? 'text-green-600' : 'text-red-600';
+        const sign = isIngreso ? '+' : '-';
+        return `
+            <div class="flex justify-between items-center border-b border-gray-50 py-2">
+                <div>
+                    <div class="font-bold text-gray-700">${m.d}</div>
+                    <div class="text-[10px] text-gray-400 flex gap-2">
+                        <span class="bg-gray-100 px-1.5 rounded uppercase">${m.c}</span>
+                        <span>${new Date(m.h).toLocaleDateString()}</span>
+                    </div>
+                </div>
+                <div class="font-bold ${color}">${sign} ${fmtNum(m.m)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+$('query-rango-btn').onclick=async()=>{
+    const ini=$('reporte-fecha-inicio').value, fin=$('reporte-fecha-fin').value;
+    const header = document.getElementById('reporte-resultados-header');
+    if(header) header.textContent=`Reporte: ${ini} a ${fin}`;
+    
+    try {
+        const [sC,sCF]=await Promise.all([
+            getDocs(query(colCierres,where('__name__','>=',ini),where('__name__','<=',fin))),
+            getDocs(query(colCajaFuerte,where('h','>=',ini),where('h','<=',fin+'T23:59:59')))
+        ]);
+        const rep=[], cf=[];
+        sC.forEach(d=>rep.push(d.data()));
+        sCF.forEach(d=>cf.push(d.data()));
+        
+        // Totales
+        const totC = rep.reduce((a,b)=>a+(b.neto||0),0); // Ganancia operativa
+        
+        // Analisis de Caja Fuerte
+        let cfIngresos = 0, cfEgresos = 0;
+        cf.forEach(m => {
+            if(m.t === 'ingreso') cfIngresos += m.m;
+            else cfEgresos += m.m;
+        });
+
+        const resDiv = $('reporte-resultados');
+        if(resDiv) resDiv.innerHTML=`
+            <div class="flex justify-between border-b border-gray-700 pb-2"><span>Utilidad Operativa:</span><span class="font-bold">${fmtNum(totC)}</span></div>
+            <div class="flex justify-between pt-2 text-gray-400 text-xs"><span>Ingresos Caja Fuerte:</span><span>+ ${fmtNum(cfIngresos)}</span></div>
+            <div class="flex justify-between pb-2 text-gray-400 text-xs border-b border-gray-700"><span>Gastos Caja Fuerte:</span><span>- ${fmtNum(cfEgresos)}</span></div>
+            <div class="flex justify-between pt-2 text-xl font-bold text-white"><span>Flujo Total Neto:</span><span>${fmtNum(totC + cfIngresos - cfEgresos)}</span></div>
+        `;
+        
+        const map={}; 
+        // Mapa de gastos operativos
+        rep.forEach(r=>(r.gastos||[]).forEach(g=>{
+            const n=g.desc.split(' (')[0];
+            map[n]=(map[n]||0)+g.m;
+        }));
+        // Mapa de gastos caja fuerte
+        cf.forEach(m => {
+            if(m.t === 'egreso') map[`(CF) ${m.d}`] = (map[`(CF) ${m.d}`]||0) + m.m;
+        });
+
+        const analDiv = $('reporte-analisis-gastos');
+        if(analDiv) analDiv.innerHTML=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([k,v])=>`<div class="flex justify-between text-sm border-b border-gray-50 py-1"><span>${k}</span><span class="font-medium">${fmtNum(v)}</span></div>`).join('');
+        
+        const movs=[]; 
+        rep.forEach(r=>(r.gastos||[]).forEach(g=>movs.push({d:g.desc,m:g.m,t:'Operativo',h:g.h})));
+        cf.forEach(m => movs.push({d:m.d, m:m.m, t: m.t==='ingreso'?'CF Ingreso':'CF Gasto', h:m.h}));
+
+        const detDiv = $('reporte-detalle-movimientos');
+        if(detDiv) detDiv.innerHTML=movs.sort((a,b)=>a.h.localeCompare(b.h)).map(m=>`<div class="flex justify-between text-xs border-b border-gray-50 py-1"><div><span class="font-medium text-gray-700">${m.d}</span> <span class="text-[9px] text-gray-400 bg-gray-100 px-1 rounded">${m.t}</span></div><span class="font-medium">${fmtNum(m.m)}</span></div>`).join('');
+        
+        const wrapper = $('reporte-resultados-wrapper');
+        if(wrapper) wrapper.classList.remove('hidden');
+        document.querySelector('#resumenes-view').scrollTo({top: 500, behavior: 'smooth'});
+    } catch(e) { console.error(e); }
+};
+
+document.querySelectorAll('.query-shortcut-btn').forEach(btn=>{
+    btn.onclick=()=>{
+        const r=btn.dataset.range;
+        const t=new Date(); 
+        let s, e=new Date(t);
+        
+        if(r==='today') { s=new Date(t); }
+        else if(r==='this_month') { s=new Date(t.getFullYear(), t.getMonth(), 1); }
+        else if(r==='last_month') { 
+            s=new Date(t.getFullYear(), t.getMonth()-1, 1); 
+            e=new Date(t.getFullYear(), t.getMonth(), 0); 
+        }
+        else if(r==='this_year') { s=new Date(t.getFullYear(), 0, 1); }
+        
+        const format = d => {
+            const z = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+            return z.toISOString().split('T')[0];
+        };
+
+        $('reporte-fecha-inicio').value=format(s); 
+        $('reporte-fecha-fin').value=format(e); 
+        $('query-rango-btn').click();
+    }
+});
+
+// AUTO-FOCUS AL CAMBIAR DE PESTAÑA
+['bitacora','caja-fuerte','productos','empleados','resumenes'].forEach(v => {
+    const btn = document.getElementById(`goto-${v}-btn`);
+    if (btn) {
+        btn.onclick = () => {
+            document.querySelectorAll('[id$="-view"]').forEach(e => e.classList.add('hidden'));
+            const targetView = document.getElementById(`${v}-view`);
+            if(targetView) targetView.classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(b => {b.classList.remove('nav-btn-active');b.classList.add('nav-btn-inactive');});
+            btn.classList.remove('nav-btn-inactive');btn.classList.add('nav-btn-active');
+
+            // Focus logica
+            if(v === 'bitacora') setTimeout(() => $('gasto-search').focus(), 100);
+            if(v === 'caja-fuerte') setTimeout(() => $('cf-desc').focus(), 100);
+            if(v === 'productos') setTimeout(() => $('producto-manage-search').focus(), 100);
+            if(v === 'empleados') setTimeout(() => $('empleado-nombre').focus(), 100);
+        };
+    }
+});
+
+$('print-recibo-btn').onclick=()=>{document.body.className='print-receipt';window.print();};
+$('print-carta-btn').onclick=()=>{document.body.className='';window.print();};
+
+init();
+</script>
+</body>
+</html>
