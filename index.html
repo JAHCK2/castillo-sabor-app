@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v37</title>
+<title>EL CASTILLO DEL SABOR 🏰 v38</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -33,7 +33,6 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
 </head>
 <body class="bg-gray-100 text-gray-900 select-none">
 
-<!-- Alerta de error de Firebase -->
 <div id="firebase-error-modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[200] flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border-b-4 border-red-500">
         <div class="text-5xl">⚠️</div>
@@ -65,7 +64,7 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
 <div id="app-wrapper" class="app-container p-3 pb-24">
     <header class="mb-3 no-print flex flex-col gap-2">
         <div class="flex justify-between items-center">
-            <div><h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1><p class="text-xs text-indigo-500 font-medium">v37 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p></div>
+            <div><h1 class="text-2xl font-extrabold text-indigo-800 tracking-tight">EL CASTILLO 🏰</h1><p class="text-xs text-indigo-500 font-medium">v38 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p></div>
             <div id="auth-status" class="text-right flex items-center gap-2">
                 <div class="flex flex-col items-end"><div id="sync-status-msg" class="hidden inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full mb-1">● ONLINE</div><span id="user-id-full" class="font-mono text-xs text-gray-700 font-medium bg-white px-1 rounded border border-gray-200">...</span></div>
                 <button id="sync-btn" class="w-8 h-8 flex items-center justify-center text-xl bg-white border border-indigo-200 text-indigo-600 rounded-lg shadow-sm">⚙️</button>
@@ -352,6 +351,40 @@ $('gasto-search').oninput=(e)=>{
         }; res.appendChild(d);
     }); res.classList.remove('hidden');
 };
+
+// --- FUNCIONES FALTANTES (Añadidas en v38) ---
+
+function renderProd(){$('lista-productos').innerHTML=localProd.map(p=>`<div class="bg-white p-3 border border-gray-100 rounded-xl flex justify-between items-center shadow-sm"><div><span class="font-bold text-gray-800 block">${p.nombre}</span><span class="text-xs text-gray-500">${p.tipo==='fijo'?fmtNum(p.precio):'Variable'}</span></div><button onclick="fillProd('${p.id}')" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
+
+window.fillProd=(id)=>{const p=localProd.find(x=>x.id===id);$('producto-id').value=id;$('producto-nombre').value=p.nombre;$('producto-tipo').value=p.tipo;$('producto-precio').value=p.precio;curProv=p.prov||[];renderProvList();$('producto-form-title').textContent='Editar: '+p.nombre;$('delete-producto-btn').classList.remove('hidden');document.querySelector('#productos-view').scrollIntoView();};
+
+window.delProd=async(id)=>{await deleteDoc(doc(colProd,id));$('clear-producto-form-btn').click();};
+
+$('save-producto-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('producto-nombre').value,tipo:$('producto-tipo').value,precio:Number($('producto-precio').value),prov:curProv};const id=$('producto-id').value;if(id)await setDoc(doc(colProd,id),d,{merge:true});else await addDoc(colProd,d);$('clear-producto-form-btn').click();$('producto-save-message').textContent='Guardado';setTimeout(()=>$('producto-save-message').textContent='',2000);};
+
+$('add-proveedor-btn').onclick=()=>{curProv.push({n:$('prov-nom').value,t:$('prov-tel').value});renderProvList();$('prov-nom').value='';$('prov-tel').value='';};
+
+$('producto-manage-search').oninput=(e)=>{const q=norm(e.target.value),el=$('producto-manage-search-results');el.innerHTML='';if(!q){el.classList.add('hidden');return;}localProd.filter(p=>norm(p.nombre).includes(q)).forEach(p=>{const d=document.createElement('div');d.textContent=p.nombre;d.onclick=()=>{fillProd(p.id);el.classList.add('hidden');$('producto-manage-search').value='';};el.appendChild(d);});el.classList.remove('hidden');};
+
+$('clear-producto-form-btn').onclick=()=>{ $('producto-form').reset(); $('producto-id').value=''; $('producto-form-title').textContent='Agregar Producto'; $('delete-producto-btn').classList.add('hidden'); curProv=[]; renderProvList(); };
+
+function renderProvList(){$('proveedores-en-formulario-lista').innerHTML=curProv.map((p,i)=>`<div class="flex justify-between bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs items-center"><span><span class="font-bold">${p.n}</span> (${p.t})</span><button onclick="curProv.splice(${i},1);renderProvList()" class="text-red-400 font-bold px-2">✕</button></div>`).join('');}
+
+$('producto-tipo').onchange=(e)=>{if(e.target.value==='fijo')$('producto-precio-wrapper').classList.remove('hidden');else $('producto-precio-wrapper').classList.add('hidden');};
+
+$('save-empleado-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('empleado-nombre').value,sueldo:Number($('empleado-sueldo').value)};const id=$('empleado-id').value;if(id)await setDoc(doc(colEmp,id),d,{merge:true});else await addDoc(colEmp,d);$('empleado-form').reset();};
+
+function renderEmp(){$('lista-empleados').innerHTML=localEmp.map(e=>`<div class="bg-white p-3 border border-gray-100 rounded-xl shadow-sm flex justify-between items-center"><div><span class="font-bold text-gray-800 block">${e.nombre}</span><span class="text-xs text-gray-500">Diario: ${fmtNum(e.sueldo)}</span></div><button onclick="$('empleado-id').value='${e.id}';$('empleado-nombre').value='${e.nombre}';$('empleado-sueldo').value='${e.sueldo}';" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
+
+$('save-gasto-general-btn').onclick=async(e)=>{e.preventDefault();await addDoc(colGen,{d:$('gasto-general-desc').value,c:$('gasto-general-categoria').value,m:Number($('gasto-general-monto').value),h:new Date().toISOString(),fecha:$('fecha-actual').dataset.iso});$('gasto-general-form').reset();$('gasto-general-save-message').textContent='Gasto registrado';setTimeout(()=>$('gasto-general-save-message').textContent='',2000);};
+
+function renderGen(){$('lista-gastos-generales').innerHTML=localGen.filter(x=>curCat==='Todos'||x.c===curCat).sort((a,b)=>b.h.localeCompare(a.h)).map(g=>`<div class="bg-white p-3 border border-gray-100 rounded-xl shadow-sm flex justify-between items-center"><div><span class="font-bold text-gray-800 block">${g.d}</span><span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase tracking-wider">${g.c}</span></div><div class="flex items-center gap-3"><span class="text-red-500 font-bold">${fmtNum(g.m)}</span><button onclick="editItem('${g.id}','gen')" class="text-gray-400 hover:text-indigo-600">✎</button></div></div>`).join('');}
+
+$('gasto-general-filter-buttons').onclick=(e)=>{if(e.target.classList.contains('filter-btn')){document.querySelectorAll('#gasto-general-filter-buttons .filter-btn').forEach(b=>b.className='filter-btn filter-btn-inactive');e.target.className='filter-btn filter-btn-active';curCat=e.target.dataset.categoria;renderGen();}};
+
+$('gasto-general-search').oninput=(e)=>{const q=norm(e.target.value),el=$('gasto-general-search-results');el.innerHTML='';if(!q){el.classList.add('hidden');return;}PRE_GEN.filter(g=>norm(g.desc).includes(q)).forEach(g=>{const d=document.createElement('div');d.textContent=g.desc;d.onclick=()=>{ $('gasto-general-desc').value=g.desc; $('gasto-general-categoria').value=g.cat; $('gasto-general-monto').focus(); el.classList.add('hidden'); };el.appendChild(d);});el.classList.remove('hidden');};
+
+// --- FIN FUNCIONES FALTANTES ---
 
 $('query-rango-btn').onclick=async()=>{
     const ini=$('reporte-fecha-inicio').value, fin=$('reporte-fecha-fin').value;
