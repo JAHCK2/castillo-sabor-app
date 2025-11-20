@@ -6,10 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Castillo Sabor">
-<meta name="theme-color" content="#4338ca">
+<meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v52</title>
+<title>EL CASTILLO DEL SABOR 🏰 v60</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -17,12 +17,12 @@ body{font-family:'Inter',sans-serif; -webkit-tap-highlight-color: transparent; o
 .app-container{max-width:600px;margin:0 auto; min-height: 100vh; background-color: #f3f4f6; padding-bottom: 150px;}
 
 /* Animaciones */
-.log-item,.producto-item{animation:slideIn .2s ease-out}
-@keyframes slideIn{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:translateX(0)}}
+.log-item,.producto-item{animation:slideIn .1s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
-/* Buscador Flotante Mejorado */
+/* Buscador Flotante */
 .search-results-popover{max-height:300px;overflow-y:auto;border:1px solid #e2e8f0;position:absolute;z-index:100;width:100%;background:#fff;box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15); border-radius: 0 0 12px 12px;}
-.search-item{padding:.5rem 0.8rem; cursor:pointer; border-bottom:1px solid #f3f4f6; transition: all 0.1s; display: flex; flex-direction: column; justify-content: center;}
+.search-item{padding:.5rem 0.8rem; cursor:pointer; border-bottom:1px solid #f3f4f6; transition: all 0.05s; display: flex; flex-direction: column; justify-content: center;}
 .search-item:hover, .search-item.active {background-color:#e0e7ff; border-left: 4px solid #4f46e5; padding-left: 0.6rem;} 
 
 /* Navegación */
@@ -49,6 +49,8 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
 /* Caja Fuerte Card */
 .safe-card {background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); position: relative; overflow: hidden;}
 .safe-card::after {content: "🔐"; position: absolute; right: -10px; top: -10px; font-size: 100px; opacity: 0.05; transform: rotate(15deg);}
+.safe-card-dark {background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); position: relative; overflow: hidden;}
+.safe-card-dark::after {content: "🔒"; position: absolute; right: -10px; top: 50%; transform: translateY(-50%) rotate(15deg); font-size: 80px; opacity: 0.1;}
 
 @media print{body>*{display:none!important}#app-wrapper{display:block!important;position:absolute;top:0;left:0;width:100%;margin:0;padding:0;background:white!important}.no-print{display:none!important}#reporte-resultados-wrapper{display:block!important;box-shadow:none!important;border:none!important}#reporte-resultados,.bg-white{background-color:#fff!important;color:#000!important;border:none!important}body.print-receipt{width:80mm}body.print-receipt #app-wrapper{width:80mm}body.print-receipt .log-item{border-bottom:1px dashed #000;font-size:12px}}
 </style>
@@ -65,12 +67,34 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
     </div>
 </div>
 
+<!-- MODAL DE EDICIÓN MEJORADO (CANTIDAD VS MONTO) -->
 <div id="edit-modal" class="modal">
-    <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-xs space-y-4">
-        <h3 class="text-lg font-bold text-gray-800">Editar Monto</h3>
-        <p id="edit-modal-desc" class="text-sm text-gray-500 font-medium">...</p>
-        <input type="text" inputmode="numeric" id="edit-modal-monto" class="money-input block w-full px-4 py-3 border-2 border-indigo-100 rounded-xl text-lg font-bold text-center focus:border-indigo-500 outline-none" onfocus="this.select()">
-        <div class="flex gap-3"><button id="edit-modal-cancel-btn" class="flex-1 py-2 bg-gray-100 rounded-xl font-bold text-gray-600">Cancelar</button><button id="edit-modal-save-btn" class="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Guardar</button></div>
+    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xs space-y-4 transform transition-all scale-100">
+        <div class="flex justify-between items-start">
+            <h3 class="text-lg font-bold text-gray-800">Editar Ítem</h3>
+            <button id="edit-modal-close-x" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+        </div>
+        <p id="edit-modal-desc" class="text-sm text-gray-500 font-medium truncate bg-gray-50 p-2 rounded-lg"></p>
+        
+        <!-- Opción 1: Editar Cantidad (Para productos fijos) -->
+        <div id="edit-mode-cant" class="hidden space-y-2">
+            <label class="block text-xs font-bold text-indigo-600 uppercase">Nueva Cantidad</label>
+            <div class="flex items-center gap-3">
+                <input type="number" id="edit-modal-cantidad" class="block w-full px-4 py-3 border-2 border-indigo-100 rounded-xl text-2xl font-extrabold text-center text-indigo-600 focus:border-indigo-500 outline-none" min="1">
+            </div>
+            <p class="text-[10px] text-gray-400 text-center">El precio total se recalculará automáticamente.</p>
+        </div>
+
+        <!-- Opción 2: Editar Monto (Para variables/servicios) -->
+        <div id="edit-mode-monto" class="hidden space-y-2">
+            <label class="block text-xs font-bold text-green-600 uppercase">Nuevo Valor Total</label>
+            <input type="text" inputmode="numeric" id="edit-modal-monto" class="money-input block w-full px-4 py-3 border-2 border-green-100 rounded-xl text-2xl font-bold text-center text-gray-700 focus:border-green-500 outline-none">
+        </div>
+        
+        <div class="flex gap-3 pt-2">
+            <button id="edit-modal-cancel-btn" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors">Cancelar</button>
+            <button id="edit-modal-save-btn" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-colors">Guardar Cambios</button>
+        </div>
     </div>
 </div>
 
@@ -84,34 +108,40 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
 </div>
 
 <div id="app-wrapper" class="app-container p-3 pb-24">
-    <header class="mb-2 no-print flex flex-col gap-1">
-        <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <!-- Logo -->
-                <img src="LOGO.png" alt="Logo" class="h-10 w-auto object-contain" onerror="this.style.display='none'">
-                <div>
-                    <h1 class="text-xl font-extrabold text-indigo-900 tracking-tight leading-tight">EL CASTILLO<br>DEL SABOR</h1>
-                    <p class="text-[10px] text-indigo-500 font-medium">v52 <span class="text-gray-400">|</span> <span id="fecha-actual"></span></p>
-                </div>
+    <header class="mb-2 no-print bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+        <!-- LOGO Y TITULO AJUSTADOS -->
+        <div class="flex items-center gap-3">
+            <div class="h-14 w-14 flex-shrink-0">
+                <img src="LOGO.png" alt="Logo" class="h-full w-full object-contain drop-shadow-sm" onerror="this.style.display='none'">
             </div>
-            <div id="auth-status" class="text-right flex items-center gap-2">
-                <div class="flex flex-col items-end"><div id="sync-status-msg" class="hidden inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded-full mb-1">● ONLINE</div><span id="user-id-full" class="font-mono text-[10px] text-gray-500 bg-white px-1 rounded border border-gray-100">...</span></div>
-                <button id="sync-btn" class="w-8 h-8 flex items-center justify-center text-lg bg-white border border-indigo-100 text-indigo-600 rounded-lg shadow-sm active:scale-95">⚙️</button>
+            <div class="flex flex-col justify-center">
+                <h1 class="text-xl font-black text-indigo-900 tracking-tight leading-none">EL CASTILLO<br><span class="text-indigo-600">DEL SABOR</span></h1>
+                <p class="text-[10px] text-gray-400 font-medium mt-0.5">v60 <span class="mx-1">•</span> <span id="fecha-actual"></span></p>
             </div>
+        </div>
+        
+        <div id="auth-status" class="flex flex-col items-end">
+            <div id="sync-status-msg" class="hidden inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 text-[9px] font-bold rounded-full border border-green-100 mb-1">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span> ONLINE
+            </div>
+            <button id="sync-btn" class="p-2 bg-gray-50 text-gray-400 hover:text-indigo-600 rounded-lg transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </button>
+            <span id="user-id-full" class="hidden"></span>
         </div>
     </header>
 
-    <div class="nav-wrapper mb-4 no-print sticky top-0 z-40">
+    <div class="nav-wrapper mb-4 no-print sticky top-0 z-40 shadow-sm">
         <button id="goto-bitacora-btn" class="nav-btn nav-btn-active">💰 Caja Diario</button>
         <button id="goto-caja-fuerte-btn" class="nav-btn nav-btn-inactive">🔐 Caja Fuerte</button>
-        <button id="goto-productos-btn" class="nav-btn nav-btn-inactive">📋 Prod</button>
+        <button id="goto-productos-btn" class="nav-btn nav-btn-inactive">📋 Prod/Serv</button>
         <button id="goto-empleados-btn" class="nav-btn nav-btn-inactive">👷 Emp</button>
         <button id="goto-resumenes-btn" class="nav-btn nav-btn-inactive">📊 Report</button>
     </div>
 
     <!-- VISTA CAJA DIARIA -->
     <div id="bitacora-view" class="space-y-3">
-        <form id="cierre-form" class="space-y-3">
+        <form id="cierre-form" class="space-y-3" onsubmit="return false;">
             <section class="bg-white p-3 rounded-2xl shadow-sm border border-indigo-50 no-print relative">
                 <div class="flex items-center justify-between mb-2"><h2 class="text-sm font-extrabold text-indigo-900 uppercase tracking-wide">1. Compras / Nómina (Salidas de Caja)</h2><span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">Diario</span></div>
                 
@@ -166,7 +196,11 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-gray-50 p-3 rounded-xl border border-gray-100"><label class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Base Fija</label><div id="base-fija-display" class="text-xl font-bold text-gray-700 mt-1">$ 200.000</div></div>
                     <div class="bg-white p-0 rounded-lg"><label class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1 block">Efectivo Real</label><input type="text" inputmode="numeric" id="efectivo-final" class="money-input w-full px-3 py-2 border-2 border-green-100 rounded-xl text-xl font-bold text-green-700 bg-green-50 focus:bg-white focus:border-green-500 outline-none transition-colors" placeholder="$0"></div>
-                    <div class="col-span-2"><label class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1 block">Pagos Digitales (Nequi/Daviplata)</label><input type="text" inputmode="numeric" id="pagos-digitales" class="money-input w-full px-3 py-2 border-2 border-purple-100 rounded-xl text-xl font-bold text-purple-700 bg-purple-50 focus:bg-white focus:border-purple-500 outline-none transition-colors" placeholder="$0"></div>
+                    <div class="col-span-2 bg-purple-50 p-3 rounded-xl border border-purple-100 mt-2">
+                        <label class="text-[10px] text-purple-700 uppercase font-bold tracking-wider mb-1 block">💰 Pagos Digitales (Nequi/Davi)</label>
+                        <p class="text-[9px] text-purple-500 mb-1 leading-tight">Este dinero va directo a Caja Fuerte (Digital) y NO afecta el cuadre de efectivo diario.</p>
+                        <input type="text" inputmode="numeric" id="pagos-digitales" class="money-input w-full px-3 py-2 border-2 border-purple-200 rounded-xl text-xl font-bold text-purple-800 bg-white focus:border-purple-500 outline-none transition-colors" placeholder="$0">
+                    </div>
                 </div>
             </section>
 
@@ -176,33 +210,24 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
                     <div class="flex justify-between text-gray-400 text-base"><span>Total Retiros:</span><span id="resumen-retiros" class="text-blue-300 font-mono font-bold text-xl">$ 0</span></div>
                     <div class="h-px bg-gray-700 my-3 opacity-50"></div>
                     <div class="flex justify-between text-lg"><span>Ventas Efectivo:</span><span id="resumen-ventas-efectivo" class="text-green-400 font-mono font-bold text-2xl">$ 0</span></div>
-                    <div class="flex justify-between text-lg"><span>Ventas Digitales:</span><span id="resumen-ventas-digital" class="text-purple-400 font-mono font-bold text-2xl">$ 0</span></div>
+                    <div class="flex justify-between text-sm text-purple-300"><span>+ Digitales (Directo CF):</span><span id="resumen-ventas-digital" class="font-mono font-bold text-lg">$ 0</span></div>
                     <div class="flex justify-between items-end mt-4 pt-4 border-t border-gray-700"><span class="font-bold text-gray-400 pb-1 text-sm uppercase tracking-widest">VENTA TOTAL</span><span id="resumen-venta-total" class="text-5xl font-extrabold text-white tracking-tight">$ 0</span></div>
-                    <div class="flex justify-between text-xs text-gray-500 mt-2"><span>Ganancia Neta:</span><span id="resumen-ganancia-neta" class="text-lg">$ 0</span></div>
                 </div>
             </section>
-            <button type="button" id="save-cierre-btn" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-bold shadow-lg active:scale-[0.98] transition-transform no-print flex justify-center items-center gap-2 text-lg mt-2"><span>💾</span> Guardar Cierre del Día</button>
+            <button type="button" id="save-cierre-btn" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-bold shadow-lg active:scale-[0.98] transition-transform no-print flex justify-center items-center gap-2 text-lg mt-2">
+                <span>💾</span> Guardar Cierre y Transferir a Fuerte
+            </button>
             <p id="save-message" class="text-center text-green-600 text-sm font-bold h-5 no-print"></p>
         </form>
     </div>
 
-    <!-- VISTA CAJA FUERTE (NUEVA) -->
+    <!-- VISTA CAJA FUERTE -->
     <div id="caja-fuerte-view" class="hidden space-y-4 mt-3">
-        <div class="safe-card">
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dinero Acumulado</h3>
-            <div class="flex items-baseline gap-2">
-                <span class="text-4xl font-extrabold tracking-tight" id="safe-balance">$ 0</span>
-            </div>
-            <p class="text-[10px] text-gray-400 mt-2">Este es el dinero real disponible en la caja fuerte.</p>
-        </div>
-
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-            <h3 class="font-bold text-gray-800 mb-3">Registrar Movimiento Mayor</h3>
+            <h3 class="font-bold text-gray-800 mb-3">Registrar Salida / Gasto Mayor</h3>
             <div class="flex gap-2 mb-3">
-                <button type="button" class="flex-1 py-2 rounded-xl font-bold text-sm bg-green-100 text-green-700 border border-green-200 cf-type-btn transition-colors" data-type="ingreso">⬇ Ingreso / Aporte</button>
-                <button type="button" class="flex-1 py-2 rounded-xl font-bold text-sm bg-white text-gray-500 border border-gray-200 cf-type-btn transition-colors" data-type="egreso">⬆ Gasto / Retiro</button>
+                 <button type="button" class="w-full py-2 rounded-xl font-bold text-sm bg-red-100 text-red-700 border border-red-200 cf-type-btn transition-colors" data-type="egreso">⬆ REGISTRAR GASTO / RETIRO</button>
             </div>
-            <!-- CAMBIO: Foco al abrir la pestaña -->
             <input type="text" id="cf-desc" placeholder="Motivo (ej: Pago Arriendo, Retiro Socio)" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none mb-2">
             <div class="flex gap-2">
                 <select id="cf-categoria" class="flex-1 px-3 py-3 border border-gray-200 rounded-xl text-sm bg-white outline-none">
@@ -211,6 +236,29 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
                 <input type="text" inputmode="numeric" id="cf-monto" placeholder="$0" class="money-input flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-700 outline-none">
             </div>
             <button id="save-cf-mov-btn" class="w-full mt-3 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md active:scale-[0.98]">Registrar Movimiento</button>
+        </div>
+
+        <!-- SALDOS CAJA FUERTE -->
+        <div class="safe-card-dark">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-center border-b border-gray-600 pb-2">💰 GRAN TOTAL ACUMULADO</h3>
+            <div class="flex justify-center mb-4">
+                 <span class="text-5xl font-extrabold tracking-tight text-white" id="safe-total-balance">$ 0</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white/10 p-3 rounded-xl border border-white/20 backdrop-blur-sm">
+                    <h3 class="text-[10px] font-bold text-green-300 uppercase tracking-widest mb-1">Efectivo (Billetes)</h3>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-xl font-bold tracking-tight text-white" id="safe-balance">$ 0</span>
+                    </div>
+                </div>
+                <div class="bg-white/10 p-3 rounded-xl border border-white/20 backdrop-blur-sm">
+                     <h3 class="text-[10px] font-bold text-purple-300 uppercase tracking-widest mb-1">Digital (Bancos)</h3>
+                     <div class="flex items-baseline gap-2">
+                        <span class="text-xl font-bold tracking-tight text-white" id="safe-digital">$ 0</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -239,7 +287,7 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
                 </div>
             </div>
             
-            <div class="text-xs font-bold text-gray-400 uppercase mt-2 tracking-wide">Proveedores</div>
+            <div class="text-xs font-bold text-gray-400 uppercase mt-2 tracking-wide">Proveedores (Opcional)</div>
             <div id="proveedores-en-formulario-lista" class="text-xs space-y-2 bg-white border border-gray-100 rounded-xl p-2 min-h-[40px]"></div>
             <div class="flex gap-2"><input id="prov-nom" placeholder="Nombre Prov." class="flex-[2] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"><input id="prov-tel" placeholder="Teléfono" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"><button type="button" id="add-proveedor-btn" class="bg-blue-50 text-blue-600 px-4 rounded-lg font-bold hover:bg-blue-100">+</button></div>
             <div class="flex gap-3 mt-2 pt-2 border-t border-gray-100"><button type="button" id="delete-producto-btn" class="hidden w-12 bg-red-50 text-red-500 rounded-xl font-bold hover:bg-red-100 text-xl">×</button><button type="submit" id="save-producto-btn" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold shadow-sm active:bg-green-700">Guardar Cambios</button></div>
@@ -322,7 +370,9 @@ let currentFocus = -1;
 // CARRITO DE COMPRAS
 let shoppingCart = [];
 // Caja Fuerte
-let cfType = 'ingreso';
+let cfType = 'egreso';
+let masterSearchList = [];
+let currentEditItem = null;
 
 const $ = id => document.getElementById(id);
 const fmtNum = n => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n||0);
@@ -368,11 +418,7 @@ async function init(){
                 colEmp=collection(db,`${path}/empleados`);
                 colCajaFuerte=collection(db,`${path}/caja_fuerte`);
                 
-                // Auto focus
-                setTimeout(() => { 
-                    if(!$('gasto-search').value) $('gasto-search').focus(); 
-                }, 500);
-
+                setTimeout(() => { if(!$('gasto-search').value) $('gasto-search').focus(); }, 500);
                 setupSubs(isoDate);
             }
         });
@@ -393,9 +439,10 @@ function setupSubs(currentIsoDate){
         localProd=[]; s.forEach(d=>localProd.push({id:d.id,...d.data()}));
         if(!localProd.length && !seeding){seeding=true;const b=writeBatch(db);PRE_GASTOS.forEach(p=>b.set(doc(colProd),p));await b.commit();}
         renderProd();
+        updateMasterSearchList(); 
     });
     if(subEmp)subEmp();
-    subEmp=onSnapshot(query(colEmp),s=>{localEmp=[];s.forEach(d=>localEmp.push({id:d.id,...d.data()}));renderEmp();});
+    subEmp=onSnapshot(query(colEmp),s=>{localEmp=[];s.forEach(d=>localEmp.push({id:d.id,...d.data()}));renderEmp(); updateMasterSearchList();});
     
     // Caja Fuerte Sub
     if(subCajaFuerte) subCajaFuerte();
@@ -408,6 +455,13 @@ function setupSubs(currentIsoDate){
     subHist=onSnapshot(query(colCierres),s=>{let h=[];s.forEach(d=>h.push({id:d.id,...d.data()}));
         if($('historial-lista')) $('historial-lista').innerHTML=h.sort((a,b)=>b.id.localeCompare(a.id)).slice(0,5).map(r=>`<div class="bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center"><span class="font-mono text-gray-500">${r.id.slice(5)}</span><span class="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md">${fmtNum(r.neto)}</span></div>`).join('');
     });
+}
+
+function updateMasterSearchList() {
+    masterSearchList = [
+        ...localProd.map(p=>({...p,l:p.nombre})),
+        ...localEmp.map(e=>({...e,l:`Nómina: ${e.nombre}`,tipo:'nomina',precio:e.sueldo}))
+    ];
 }
 
 document.addEventListener('input', function(e) {
@@ -426,8 +480,8 @@ function renderBitacora(){
     const tg=gastos.reduce((s,i)=>s+i.m,0), tr=retiros.reduce((s,i)=>s+i.m,0);
     const venEf=(ef-BASE)+tg+tr; const tot=(venEf>0?venEf:0)+dig;
     
-    $('lista-gastos').innerHTML=gastos.map(g=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${g.desc}</span><span class="text-[10px] text-gray-400">${fmtTime(g.h)}</span></div><div class="flex items-center gap-2"><span class="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">${fmtNum(g.m)}</span><button onclick="window.editItem('${g.id}','g')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${g.id}','g')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
-    $('lista-retiros').innerHTML=retiros.map(r=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${r.desc}</span></div><div class="flex items-center gap-2"><span class="font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">${fmtNum(r.m)}</span><button onclick="window.editItem('${r.id}','r')" class="text-indigo-400 hover:text-indigo-600 p-1">✎</button><button onclick="window.delItem('${r.id}','r')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    $('lista-gastos').innerHTML=gastos.map(g=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${g.desc}</span><span class="text-[10px] text-gray-400">${fmtTime(g.h)}</span></div><div class="flex items-center gap-2"><span class="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">${fmtNum(g.m)}</span><button onclick="window.editItem('${g.id}','g')" class="text-indigo-400 hover:text-indigo-600 p-1 text-lg">✎</button><button onclick="window.delItem('${g.id}','g')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
+    $('lista-retiros').innerHTML=retiros.map(r=>`<div class="flex justify-between items-center border-b border-gray-50 p-2 text-sm hover:bg-gray-50 rounded transition-colors"><div class="flex flex-col leading-tight"><span class="font-medium text-gray-800">${r.desc}</span></div><div class="flex items-center gap-2"><span class="font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">${fmtNum(r.m)}</span><button onclick="window.editItem('${r.id}','r')" class="text-indigo-400 hover:text-indigo-600 p-1 text-lg">✎</button><button onclick="window.delItem('${r.id}','r')" class="text-red-300 hover:text-red-500 p-1 font-bold">×</button></div></div>`).join('');
     
     if($('resumen-gastos')) $('resumen-gastos').textContent=fmtNum(tg); 
     if($('resumen-retiros')) $('resumen-retiros').textContent=fmtNum(tr);
@@ -442,242 +496,186 @@ window.saveCierre=async()=>{
     const tg=gastos.reduce((s,i)=>s+i.m,0), tr=retiros.reduce((s,i)=>s+i.m,0);
     const venEf=(ef-BASE)+tg+tr; const tot=(venEf>0?venEf:0)+dig;
     await setDoc(doc(colCierres,$('fecha-actual').dataset.iso),{ef,dig,gastos,retiros,tg,tr,venEf:venEf>0?venEf:0,tot,neto:tot-tg},{merge:true});
-    if($('save-message')) { $('save-message').textContent="✓ Guardado"; setTimeout(()=>$('save-message').textContent="",2500); }
+    
+    // AUTOMATIZACION CAJA FUERTE
+    const fechaHoy = $('fecha-actual').dataset.iso;
+    if (dig > 0) {
+        await setDoc(doc(colCajaFuerte, `auto_dig_${fechaHoy}`), { t: 'ingreso', d: `Cierre ${fechaHoy} (Digital)`, c: 'Venta', m: dig, h: new Date().toISOString(), digital: dig });
+    }
+    const gananciaEfectivo = (ef - BASE) + tr;
+    if (gananciaEfectivo !== 0) { 
+         await setDoc(doc(colCajaFuerte, `auto_efec_${fechaHoy}`), { t: 'ingreso', d: `Cierre ${fechaHoy} (Efectivo)`, c: 'Venta', m: gananciaEfectivo, h: new Date().toISOString(), digital: 0 });
+    }
+    if($('save-message')) { $('save-message').textContent="✓ Guardado y Transferido"; setTimeout(()=>$('save-message').textContent="",2500); }
 };
 
-$('efectivo-final').oninput=()=>{ renderBitacora(); window.saveCierre(); };
-$('pagos-digitales').oninput=()=>{ renderBitacora(); window.saveCierre(); };
+$('efectivo-final').oninput=()=>{ renderBitacora(); };
+$('pagos-digitales').oninput=()=>{ renderBitacora(); };
 
-// LÓGICA CARRITO DE COMPRAS (MODO CHUCHO)
+// LÓGICA CARRITO
 $('add-to-cart-btn').onclick = () => {
     const desc = $('gasto-desc').value;
     const cant = Number($('gasto-cantidad').value) || 1;
     const monto = cleanNum($('gasto-monto').value);
-
     if (!desc || monto <= 0) return;
-
-    const item = {
-        id: Date.now() + '',
-        desc: desc + (cant > 1 ? ` (x${cant})` : ''), // Info cantidad en descripcion
-        m: monto,
-        cant: cant, // Guardamos por si acaso
-        h: new Date().toISOString()
-    };
-
-    shoppingCart.push(item);
-    renderCart();
-    
-    // Limpiar inputs y volver al buscador
-    $('gasto-desc').value = '';
-    $('gasto-monto').value = '';
-    $('gasto-cantidad').classList.add('hidden');
-    $('gasto-monto').readOnly = false;
-    $('gasto-search').value = '';
-    $('gasto-search').focus();
-    selItem = null;
+    const item = { id: Date.now() + '', desc: desc + (cant > 1 ? ` (x${cant})` : ''), m: monto, cant: cant, h: new Date().toISOString() };
+    shoppingCart.push(item); renderCart();
+    $('gasto-desc').value = ''; $('gasto-monto').value = ''; $('gasto-cantidad').classList.add('hidden'); $('gasto-monto').readOnly = false; $('gasto-search').value = ''; $('gasto-search').focus(); selItem = null;
 };
 
 function renderCart() {
     const cartContainer = $('shopping-cart');
-    const cartList = $('cart-items');
-    const cartTotal = $('cart-total');
-    
     if (shoppingCart.length > 0) {
-        cartContainer.classList.remove('hidden');
-        cartContainer.classList.add('has-items'); // Borde azul
-        
+        cartContainer.classList.remove('hidden'); cartContainer.classList.add('has-items'); 
         let total = 0;
-        cartList.innerHTML = shoppingCart.map((item, index) => {
-            total += item.m;
-            return `<div class="flex justify-between items-center border-b border-gray-200 py-1">
-                <div class="flex gap-2 items-center flex-1 min-w-0">
-                    <span class="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded font-bold">x${item.cant}</span>
-                    <span class="truncate font-medium text-gray-700">${item.desc.replace(/ \(x\d+\)/, '')}</span>
-                </div>
-                <span class="font-bold text-gray-900 mr-2 text-sm">${fmtNum(item.m)}</span>
-                <button onclick="removeFromCart(${index})" class="text-red-500 font-bold px-1 hover:bg-red-50 rounded">✕</button>
-            </div>`;
-        }).join('');
-        
-        cartTotal.textContent = fmtNum(total);
-    } else {
-        cartContainer.classList.add('hidden');
-    }
+        $('cart-items').innerHTML = shoppingCart.map((item, index) => { total += item.m; return `<div class="flex justify-between items-center border-b border-gray-200 py-1"><div class="flex gap-2 items-center flex-1 min-w-0"><span class="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded font-bold">x${item.cant}</span><span class="truncate font-medium text-gray-700">${item.desc.replace(/ \(x\d+\)/, '')}</span></div><span class="font-bold text-gray-900 mr-2 text-sm">${fmtNum(item.m)}</span><button onclick="removeFromCart(${index})" class="text-red-500 font-bold px-1 hover:bg-red-50 rounded">✕</button></div>`; }).join('');
+        $('cart-total').textContent = fmtNum(total);
+    } else { cartContainer.classList.add('hidden'); }
 }
 
-window.removeFromCart = (index) => {
-    shoppingCart.splice(index, 1);
-    renderCart();
-};
+window.removeFromCart = (index) => { shoppingCart.splice(index, 1); renderCart(); };
+$('clear-cart-btn').onclick = () => { if(confirm('¿Borrar lista?')) { shoppingCart = []; renderCart(); } };
+$('commit-cart-btn').onclick = () => { if (shoppingCart.length === 0) return; shoppingCart.forEach(item => gastos.push(item)); shoppingCart = []; renderCart(); renderBitacora(); window.saveCierre(); };
+$('gasto-monto').addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); $('add-to-cart-btn').click(); } });
+$('gasto-cantidad').addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); $('add-to-cart-btn').click(); } });
+$('retiro-monto').addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); addItem('r'); } });
 
-$('clear-cart-btn').onclick = () => {
-    if(confirm('¿Borrar lista de compra?')) {
-        shoppingCart = [];
-        renderCart();
-    }
-};
-
-$('commit-cart-btn').onclick = () => {
-    if (shoppingCart.length === 0) return;
-    // Agregar todo al gasto real
-    shoppingCart.forEach(item => gastos.push(item));
-    
-    // Limpiar carrito
-    shoppingCart = [];
-    renderCart();
-    
-    // Guardar en Firebase
-    renderBitacora();
-    window.saveCierre();
-    alert('✅ Compra registrada exitosamente');
-};
-
-// Enter en monto del carrito -> Agregar al carrito
-$('gasto-monto').addEventListener("keydown", function(e) {
-    if (e.key === "Enter") { 
-        e.preventDefault(); 
-        $('add-to-cart-btn').click(); 
-    }
-});
-
-// Enter en cantidad -> Agregar al carrito
-$('gasto-cantidad').addEventListener("keydown", function(e) {
-    if (e.key === "Enter") { 
-        e.preventDefault(); 
-        $('add-to-cart-btn').click(); 
-    }
-});
-
-// Logica anterior (add simple) - Mantenemos por compatibilidad si alguien usa el boton + viejo, aunque lo oculte visualmente
 window.addItem=(type)=>{
     if (type === 'r') {
-        const desc=$('retiro-desc').value;
-        const m=cleanNum($('retiro-monto').value);
+        const desc=$('retiro-desc').value; const m=cleanNum($('retiro-monto').value);
         if(!desc||m<=0)return;
         retiros.push({id:Date.now()+'',desc,m,h:new Date().toISOString()});
         $('retiro-desc').value='';$('retiro-monto').value='';
         renderBitacora(); window.saveCierre();
     }
 };
-// Boton Retiro
 $('add-retiro-btn').onclick = () => addItem('r');
 
 window.delItem=(id,type)=>{if(type==='g')gastos=gastos.filter(i=>i.id!=id);else retiros=retiros.filter(i=>i.id!=id);renderBitacora();window.saveCierre();};
+
+// === LOGICA DE EDICIÓN INTELIGENTE (CANTIDAD VS MONTO) ===
 window.editItem=(id,type)=>{
-    const item=(type==='g'?gastos:type==='r'?retiros:localGen).find(i=>i.id===id); // localGen eliminado, ajustamos
-    const found = gastos.find(i=>i.id===id) || retiros.find(i=>i.id===id);
-    if(!found)return;
+    // Buscar elemento
+    currentEditItem = gastos.find(i=>i.id===id) || retiros.find(i=>i.id===id);
+    if(!currentEditItem) return;
     
-    $('edit-modal').style.display='flex';$('edit-modal').dataset.id=id;$('edit-modal').dataset.type=type;
-    $('edit-modal-desc').textContent=found.desc;
-    $('edit-modal-monto').value=formatMoneyInput(found.m);
-    setTimeout(()=> { $('edit-modal-monto').focus(); $('edit-modal-monto').select(); }, 50);
+    // Configurar Modal
+    $('edit-modal').style.display='flex';
+    $('edit-modal').dataset.id = id;
+    $('edit-modal').dataset.type = type;
+    $('edit-modal-desc').textContent = currentEditItem.desc;
+    
+    // Detectar si es producto fijo (tiene cantidad > 1 o se guardó cant)
+    const isQuantityItem = currentEditItem.cant && currentEditItem.cant > 0;
+    
+    if(isQuantityItem) {
+        // MODO CANTIDAD
+        $('edit-mode-cant').classList.remove('hidden');
+        $('edit-mode-monto').classList.add('hidden');
+        $('edit-modal-cantidad').value = currentEditItem.cant;
+        setTimeout(()=> { $('edit-modal-cantidad').focus(); $('edit-modal-cantidad').select(); }, 50);
+    } else {
+        // MODO MONTO DIRECTO
+        $('edit-mode-cant').classList.add('hidden');
+        $('edit-mode-monto').classList.remove('hidden');
+        $('edit-modal-monto').value = formatMoneyInput(currentEditItem.m);
+        setTimeout(()=> { $('edit-modal-monto').focus(); $('edit-modal-monto').select(); }, 50);
+    }
 };
 
-$('edit-modal-save-btn').onclick=async()=>{
-    const id=$('edit-modal').dataset.id, type=$('edit-modal').dataset.type, m=cleanNum($('edit-modal-monto').value);
-    // Solo gastos y retiros
-    const l=type==='g'?gastos:retiros;const i=l.find(x=>x.id===id);if(i)i.m=m;renderBitacora();window.saveCierre();
+$('edit-modal-save-btn').onclick=()=>{
+    if(!currentEditItem) return;
+    
+    // Verificar modo
+    const isQuantityMode = !$('edit-mode-cant').classList.contains('hidden');
+    
+    if(isQuantityMode) {
+        const newCant = Number($('edit-modal-cantidad').value);
+        if(newCant > 0) {
+            // Recalcular monto total (Unitario = Total Viejo / Cant Vieja)
+            const oldCant = currentEditItem.cant || 1;
+            const unitPrice = currentEditItem.m / oldCant;
+            currentEditItem.m = unitPrice * newCant;
+            currentEditItem.cant = newCant;
+            // Actualizar texto descripcion (xN)
+            currentEditItem.desc = currentEditItem.desc.replace(/ \(x\d+\)/, '') + (newCant > 1 ? ` (x${newCant})` : '');
+        }
+    } else {
+        const newMonto = cleanNum($('edit-modal-monto').value);
+        currentEditItem.m = newMonto;
+    }
+    
+    renderBitacora();
+    window.saveCierre();
     $('edit-modal').style.display='none';
+    currentEditItem = null;
 };
+$('edit-modal-cancel-btn').onclick = () => $('edit-modal').style.display='none';
+$('edit-modal-close-x').onclick = () => $('edit-modal').style.display='none';
+
 
 function addActive(x) {
     if (!x) return false;
     removeActive(x);
     if (currentFocus >= x.length) currentFocus = 0;
     if (currentFocus < 0) currentFocus = (x.length - 1);
-    x[currentFocus].classList.add("active");
-    x[currentFocus].scrollIntoView({ block: 'nearest' });
+    if(x[currentFocus]) { x[currentFocus].classList.add("active"); x[currentFocus].scrollIntoView({ block: 'nearest' }); }
 }
 function removeActive(x) { for (let i = 0; i < x.length; i++) x[i].classList.remove("active"); }
 
-// EVENTOS DE TECLADO MEJORADOS (v51)
 const gastoSearch = $('gasto-search');
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#gasto-search') && !e.target.closest('#search-results')) {
+         $('search-results').classList.add('hidden');
+    }
+});
+
+gastoSearch.addEventListener('click', function(e) {
+    const res = $('search-results');
+    if (res.classList.contains('hidden')) { this.dispatchEvent(new Event('input')); } 
+    else { res.classList.add('hidden'); }
+});
+
 gastoSearch.addEventListener("keydown", function(e) {
     let x = document.querySelectorAll("#search-results .search-item");
     if (e.key === "ArrowDown") { 
-        if (x.length === 0) { // Si lista cerrada y flecha abajo -> ABRIR
-             gastoSearch.dispatchEvent(new Event('input'));
-        }
+        if (x.length === 0 || $('search-results').classList.contains('hidden')) { gastoSearch.dispatchEvent(new Event('input')); }
         currentFocus++; addActive(x); 
     } 
     else if (e.key === "ArrowUp") { currentFocus--; addActive(x); } 
     else if (e.key === "Enter") { e.preventDefault(); if (currentFocus > -1 && x && x[currentFocus]) x[currentFocus].click(); }
 });
 
-// LÓGICA DE BÚSQUEDA BLINDADA
-gastoSearch.addEventListener('focus', function() {
-    // Al enfocar, si está vacío, mostramos todo
-    if(!this.value) {
-        this.value = ''; // Truco para disparar evento
-        this.dispatchEvent(new Event('input'));
-    }
-});
-
 gastoSearch.oninput=(e)=>{
-    const val = e.target.value;
-    const q=norm(val), res=$('search-results'); res.innerHTML=''; currentFocus = -1;
-    
-    // CAMBIO v51: Si vacío, NO ocultar, mostrar TODO
+    const val = e.target.value; const q=norm(val), res=$('search-results'); res.innerHTML=''; currentFocus = -1;
     const showAll = val === '';
+    const filtered = showAll ? masterSearchList : masterSearchList.filter(x=>norm(x.l).includes(q));
+    if (filtered.length === 0 && !showAll) { res.classList.add('hidden'); return; }
     
-    const combinedList = [
-        ...localProd.map(p=>({...p,l:p.nombre})),
-        ...localEmp.map(e=>({...e,l:`Nómina: ${e.nombre}`,tipo:'nomina',precio:e.sueldo}))
-    ];
-
-    const filtered = showAll ? combinedList : combinedList.filter(x=>norm(x.l).includes(q));
-
-    if (filtered.length === 0 && !showAll) {
-         res.classList.add('hidden'); 
-         return;
-    }
-    
-    // Renderizar lista
     filtered.forEach(x=>{
         const d=document.createElement('div'); d.className='search-item'; 
-        let cat = '';
-        if (x.tipo === 'nomina') cat = 'Empleado';
-        else cat = x.tipo === 'fijo' ? 'Precio Fijo' : 'Precio Variable';
-
+        let cat = x.tipo === 'nomina' ? 'Empleado' : (x.tipo === 'fijo' ? 'Precio Fijo' : 'Precio Variable');
         const priceDisplay = x.precio ? fmtNum(x.precio) : '';
-        
-        d.innerHTML=`
-            <div class="font-medium text-gray-800 leading-tight text-sm">${x.l}</div>
-            <div class="meta flex gap-2 mt-0.5">
-                <span class="${x.tipo==='nomina'?'text-green-600':'text-indigo-500'} font-bold text-[10px] uppercase">${cat}</span>
-                <span class="font-bold text-gray-500 text-[10px]">${priceDisplay}</span>
-            </div>`;
-            
+        d.innerHTML=`<div class="font-medium text-gray-800 leading-tight text-sm">${x.l}</div><div class="meta flex gap-2 mt-0.5"><span class="${x.tipo==='nomina'?'text-green-600':'text-indigo-500'} font-bold text-[10px] uppercase">${cat}</span><span class="font-bold text-gray-500 text-[10px]">${priceDisplay}</span></div>`;
         d.onclick=()=>{
             selItem=x; $('gasto-search').value=''; res.classList.add('hidden');
             if(x.tipo==='nomina'){
                 gastos.push({id:Date.now()+'',desc:x.l,m:x.precio,h:new Date().toISOString()});renderBitacora();window.saveCierre();
+                $('gasto-search').focus();
             } else {
-                $('gasto-desc').value=x.nombre;
-                $('gasto-monto').value=x.precio ? formatMoneyInput(x.precio) : '';
-                
-                if(x.tipo==='fijo'){
-                    $('gasto-cantidad').classList.remove('hidden');
-                    $('gasto-cantidad').value=1; 
-                    $('gasto-monto').readOnly=true;
-                    setTimeout(() => { $('gasto-cantidad').focus(); $('gasto-cantidad').select(); }, 100);
-                } else {
-                    $('gasto-cantidad').classList.add('hidden');
-                    $('gasto-monto').readOnly=false;
-                    setTimeout(() => { $('gasto-monto').focus(); $('gasto-monto').select(); }, 100);
-                }
+                $('gasto-desc').value=x.nombre; $('gasto-monto').value=x.precio ? formatMoneyInput(x.precio) : '';
+                if(x.tipo==='fijo'){ $('gasto-cantidad').classList.remove('hidden'); $('gasto-cantidad').value=1; $('gasto-monto').readOnly=true; setTimeout(() => { $('gasto-cantidad').focus(); $('gasto-cantidad').select(); }, 100); } 
+                else { $('gasto-cantidad').classList.add('hidden'); $('gasto-monto').readOnly=false; setTimeout(() => { $('gasto-monto').focus(); $('gasto-monto').select(); }, 100); }
             }
         }; res.appendChild(d);
     });
-    
     res.classList.remove('hidden');
 };
 
 $('gasto-cantidad').addEventListener('input', function() {
     if (selItem && selItem.tipo === 'fijo') {
-        const cant = Number(this.value);
-        if(cant < 1) this.value = 1; 
+        const cant = Number(this.value); if(cant < 1) this.value = 1; 
         $('gasto-monto').value = formatMoneyInput(Number(this.value) * selItem.precio);
     }
 });
@@ -714,31 +712,18 @@ $('producto-manage-search').oninput=(e)=>{
 function renderProd(){$('lista-productos').innerHTML=localProd.map(p=>`<div class="bg-white p-3 border border-gray-100 rounded-xl flex justify-between items-center shadow-sm"><div><span class="font-bold text-gray-800 block">${p.nombre}</span><span class="text-xs text-gray-500">${p.tipo==='fijo'?fmtNum(p.precio):'Variable'}</span></div><button onclick="fillProd('${p.id}')" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
 
 window.fillProd=(id)=>{
-    const p=localProd.find(x=>x.id===id);
-    $('producto-id').value=id;
-    $('producto-nombre').value=p.nombre;
-    $('producto-tipo').value=p.tipo;
-    $('producto-precio').value=formatMoneyInput(p.precio);
-    curProv=p.prov||[];renderProvList();
-    $('producto-form-title').textContent='Editar: '+p.nombre;
-    $('delete-producto-btn').classList.remove('hidden');
-    document.querySelector('#productos-view').scrollIntoView();
+    const p=localProd.find(x=>x.id===id); $('producto-id').value=id; $('producto-nombre').value=p.nombre; $('producto-tipo').value=p.tipo; $('producto-precio').value=formatMoneyInput(p.precio);
+    curProv=p.prov||[];renderProvList(); $('producto-form-title').textContent='Editar: '+p.nombre; $('delete-producto-btn').classList.remove('hidden'); document.querySelector('#productos-view').scrollIntoView();
 };
 
 window.delProd=async(id)=>{await deleteDoc(doc(colProd,id));$('clear-producto-form-btn').click();};
-
 $('save-producto-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('producto-nombre').value,tipo:$('producto-tipo').value,precio:cleanNum($('producto-precio').value),prov:curProv};const id=$('producto-id').value;if(id)await setDoc(doc(colProd,id),d,{merge:true});else await addDoc(colProd,d);$('clear-producto-form-btn').click();$('producto-save-message').textContent='Guardado';setTimeout(()=>$('producto-save-message').textContent='',2000);};
-
 $('add-proveedor-btn').onclick=()=>{curProv.push({n:$('prov-nom').value,t:$('prov-tel').value});renderProvList();$('prov-nom').value='';$('prov-tel').value='';};
-
 $('clear-producto-form-btn').onclick=()=>{ $('producto-form').reset(); $('producto-id').value=''; $('producto-form-title').textContent='Agregar Producto'; $('delete-producto-btn').classList.add('hidden'); curProv=[]; renderProvList(); };
-
 function renderProvList(){$('proveedores-en-formulario-lista').innerHTML=curProv.map((p,i)=>`<div class="flex justify-between bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs items-center"><span><span class="font-bold">${p.n}</span> (${p.t})</span><button onclick="curProv.splice(${i},1);renderProvList()" class="text-red-400 font-bold px-2">✕</button></div>`).join('');}
-
 $('producto-tipo').onchange=(e)=>{if(e.target.value==='fijo')$('producto-precio-wrapper').classList.remove('hidden');else $('producto-precio-wrapper').classList.add('hidden');};
 
 $('save-empleado-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('empleado-nombre').value,sueldo:cleanNum($('empleado-sueldo').value)};const id=$('empleado-id').value;if(id)await setDoc(doc(colEmp,id),d,{merge:true});else await addDoc(colEmp,d);$('empleado-form').reset();};
-
 function renderEmp(){$('lista-empleados').innerHTML=localEmp.map(e=>`<div class="bg-white p-3 border border-gray-100 rounded-xl shadow-sm flex justify-between items-center"><div><span class="font-bold text-gray-800 block">${e.nombre}</span><span class="text-xs text-gray-500">Diario: ${fmtNum(e.sueldo)}</span></div><button onclick="$('empleado-id').value='${e.id}';$('empleado-nombre').value='${e.nombre}';$('empleado-sueldo').value=formatMoneyInput('${e.sueldo}');" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
 
 // CAJA FUERTE LOGICA
@@ -759,49 +744,27 @@ document.querySelectorAll('.cf-type-btn').forEach(btn => {
 });
 
 $('save-cf-mov-btn').onclick = async () => {
-    const desc = $('cf-desc').value;
-    const cat = $('cf-categoria').value;
-    const monto = cleanNum($('cf-monto').value);
+    const desc = $('cf-desc').value; const cat = $('cf-categoria').value; const monto = cleanNum($('cf-monto').value);
     if(!desc || monto <= 0) return;
-    
-    await addDoc(colCajaFuerte, {
-        t: cfType, // 'ingreso' o 'egreso'
-        d: desc,
-        c: cat,
-        m: monto,
-        h: new Date().toISOString()
-    });
-    
-    $('cf-desc').value = '';
-    $('cf-monto').value = '';
+    await addDoc(colCajaFuerte, { t: cfType, d: desc, c: cat, m: monto, h: new Date().toISOString(), digital: 0 });
+    $('cf-desc').value = ''; $('cf-monto').value = '';
 };
 
 function renderCajaFuerte() {
-    // Calcular saldo
-    let saldo = 0;
+    let saldo = 0; let saldoDigital = 0;
     localCF.forEach(mov => {
-        if (mov.t === 'ingreso') saldo += mov.m;
-        else saldo -= mov.m;
+        if (mov.t === 'ingreso') { saldo += mov.m; if (mov.digital > 0) saldoDigital += mov.digital; } 
+        else { saldo -= mov.m; }
     });
     if($('safe-balance')) $('safe-balance').textContent = fmtNum(saldo);
+    if($('safe-digital')) $('safe-digital').textContent = fmtNum(saldoDigital);
+    if($('safe-total-balance')) $('safe-total-balance').textContent = fmtNum(saldo + saldoDigital);
     
-    // Renderizar lista
     if($('cf-history-list')) $('cf-history-list').innerHTML = localCF.sort((a,b) => b.h.localeCompare(a.h)).map(m => {
         const isIngreso = m.t === 'ingreso';
         const color = isIngreso ? 'text-green-600' : 'text-red-600';
         const sign = isIngreso ? '+' : '-';
-        return `
-            <div class="flex justify-between items-center border-b border-gray-50 py-2">
-                <div>
-                    <div class="font-bold text-gray-700">${m.d}</div>
-                    <div class="text-[10px] text-gray-400 flex gap-2">
-                        <span class="bg-gray-100 px-1.5 rounded uppercase">${m.c}</span>
-                        <span>${new Date(m.h).toLocaleDateString()}</span>
-                    </div>
-                </div>
-                <div class="font-bold ${color}">${sign} ${fmtNum(m.m)}</div>
-            </div>
-        `;
+        return `<div class="flex justify-between items-center border-b border-gray-50 py-2"><div><div class="font-bold text-gray-700">${m.d}</div><div class="text-[10px] text-gray-400 flex gap-2"><span class="bg-gray-100 px-1.5 rounded uppercase">${m.c}</span><span>${new Date(m.h).toLocaleDateString()}</span></div></div><div class="font-bold ${color}">${sign} ${fmtNum(m.m)}</div></div>`;
     }).join('');
 }
 
@@ -809,44 +772,18 @@ $('query-rango-btn').onclick=async()=>{
     const ini=$('reporte-fecha-inicio').value, fin=$('reporte-fecha-fin').value;
     const header = document.getElementById('reporte-resultados-header');
     if(header) header.textContent=`Reporte: ${ini} a ${fin}`;
-    
     try {
-        const [sC,sCF]=await Promise.all([
-            getDocs(query(colCierres,where('__name__','>=',ini),where('__name__','<=',fin))),
-            getDocs(query(colCajaFuerte,where('h','>=',ini),where('h','<=',fin+'T23:59:59')))
-        ]);
-        const rep=[], cf=[];
-        sC.forEach(d=>rep.push(d.data()));
-        sCF.forEach(d=>cf.push(d.data()));
-        
-        // Totales
-        const totC = rep.reduce((a,b)=>a+(b.neto||0),0); // Ganancia operativa
-        
-        // Analisis de Caja Fuerte
-        let cfIngresos = 0, cfEgresos = 0;
-        cf.forEach(m => {
-            if(m.t === 'ingreso') cfIngresos += m.m;
-            else cfEgresos += m.m;
-        });
+        const [sC,sCF]=await Promise.all([getDocs(query(colCierres,where('__name__','>=',ini),where('__name__','<=',fin))), getDocs(query(colCajaFuerte,where('h','>=',ini),where('h','<=',fin+'T23:59:59')))]);
+        const rep=[], cf=[]; sC.forEach(d=>rep.push(d.data())); sCF.forEach(d=>cf.push(d.data()));
+        const totC = rep.reduce((a,b)=>a+(b.neto||0),0); 
+        let cfIngresos = 0, cfEgresos = 0; cf.forEach(m => { if(m.t === 'ingreso') cfIngresos += m.m; else cfEgresos += m.m; });
 
         const resDiv = $('reporte-resultados');
-        if(resDiv) resDiv.innerHTML=`
-            <div class="flex justify-between border-b border-gray-700 pb-2"><span>Utilidad Operativa:</span><span class="font-bold">${fmtNum(totC)}</span></div>
-            <div class="flex justify-between pt-2 text-gray-400 text-xs"><span>Ingresos Caja Fuerte:</span><span>+ ${fmtNum(cfIngresos)}</span></div>
-            <div class="flex justify-between pb-2 text-gray-400 text-xs border-b border-gray-700"><span>Gastos Caja Fuerte:</span><span>- ${fmtNum(cfEgresos)}</span></div>
-            <div class="flex justify-between pt-2 text-xl font-bold text-white"><span>Flujo Total Neto:</span><span>${fmtNum(totC + cfIngresos - cfEgresos)}</span></div>
-        `;
+        if(resDiv) resDiv.innerHTML=`<div class="flex justify-between border-b border-gray-700 pb-2"><span>Utilidad Operativa:</span><span class="font-bold">${fmtNum(totC)}</span></div><div class="flex justify-between pt-2 text-gray-400 text-xs"><span>Ingresos Caja Fuerte:</span><span>+ ${fmtNum(cfIngresos)}</span></div><div class="flex justify-between pb-2 text-gray-400 text-xs border-b border-gray-700"><span>Gastos Caja Fuerte:</span><span>- ${fmtNum(cfEgresos)}</span></div><div class="flex justify-between pt-2 text-xl font-bold text-white"><span>Flujo Total Neto:</span><span>${fmtNum(totC + cfIngresos - cfEgresos)}</span></div>`;
         
         const map={}; 
-        // Mapa de gastos operativos
-        rep.forEach(r=>(r.gastos||[]).forEach(g=>{
-            const n=g.desc.split(' (')[0];
-            map[n]=(map[n]||0)+g.m;
-        }));
-        // Mapa de gastos caja fuerte
-        cf.forEach(m => {
-            if(m.t === 'egreso') map[`(CF) ${m.d}`] = (map[`(CF) ${m.d}`]||0) + m.m;
-        });
+        rep.forEach(r=>(r.gastos||[]).forEach(g=>{ const n=g.desc.split(' (')[0]; map[n]=(map[n]||0)+g.m; }));
+        cf.forEach(m => { if(m.t === 'egreso') map[`(CF) ${m.d}`] = (map[`(CF) ${m.d}`]||0) + m.m; });
 
         const analDiv = $('reporte-analisis-gastos');
         if(analDiv) analDiv.innerHTML=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([k,v])=>`<div class="flex justify-between text-sm border-b border-gray-50 py-1"><span>${k}</span><span class="font-medium">${fmtNum(v)}</span></div>`).join('');
@@ -866,26 +803,11 @@ $('query-rango-btn').onclick=async()=>{
 
 document.querySelectorAll('.query-shortcut-btn').forEach(btn=>{
     btn.onclick=()=>{
-        const r=btn.dataset.range;
-        const t=new Date(); 
-        let s, e=new Date(t);
+        const r=btn.dataset.range; const t=new Date(); let s, e=new Date(t);
+        if(r==='today') { s=new Date(t); } else if(r==='this_month') { s=new Date(t.getFullYear(), t.getMonth(), 1); } else if(r==='last_month') { s=new Date(t.getFullYear(), t.getMonth()-1, 1); e=new Date(t.getFullYear(), t.getMonth(), 0); } else if(r==='this_year') { s=new Date(t.getFullYear(), 0, 1); }
         
-        if(r==='today') { s=new Date(t); }
-        else if(r==='this_month') { s=new Date(t.getFullYear(), t.getMonth(), 1); }
-        else if(r==='last_month') { 
-            s=new Date(t.getFullYear(), t.getMonth()-1, 1); 
-            e=new Date(t.getFullYear(), t.getMonth(), 0); 
-        }
-        else if(r==='this_year') { s=new Date(t.getFullYear(), 0, 1); }
-        
-        const format = d => {
-            const z = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
-            return z.toISOString().split('T')[0];
-        };
-
-        $('reporte-fecha-inicio').value=format(s); 
-        $('reporte-fecha-fin').value=format(e); 
-        $('query-rango-btn').click();
+        const format = d => { const z = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)); return z.toISOString().split('T')[0]; };
+        $('reporte-fecha-inicio').value=format(s); $('reporte-fecha-fin').value=format(e); $('query-rango-btn').click();
     }
 });
 
@@ -899,8 +821,6 @@ document.querySelectorAll('.query-shortcut-btn').forEach(btn=>{
             if(targetView) targetView.classList.remove('hidden');
             document.querySelectorAll('.nav-btn').forEach(b => {b.classList.remove('nav-btn-active');b.classList.add('nav-btn-inactive');});
             btn.classList.remove('nav-btn-inactive');btn.classList.add('nav-btn-active');
-
-            // Focus logica
             if(v === 'bitacora') setTimeout(() => $('gasto-search').focus(), 100);
             if(v === 'caja-fuerte') setTimeout(() => $('cf-desc').focus(), 100);
             if(v === 'productos') setTimeout(() => $('producto-manage-search').focus(), 100);
