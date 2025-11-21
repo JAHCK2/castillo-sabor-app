@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/castle.png">
 <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/castle.png">
-<title>EL CASTILLO DEL SABOR 🏰 v60</title>
+<title>EL CASTILLO DEL SABOR 🏰 v62</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -76,7 +76,7 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
         </div>
         <p id="edit-modal-desc" class="text-sm text-gray-500 font-medium truncate bg-gray-50 p-2 rounded-lg"></p>
         
-        <!-- Opción 1: Editar Cantidad (Para productos fijos) -->
+        <!-- Opción 1: Editar Cantidad (Para productos fijos con cantidad) -->
         <div id="edit-mode-cant" class="hidden space-y-2">
             <label class="block text-xs font-bold text-indigo-600 uppercase">Nueva Cantidad</label>
             <div class="flex items-center gap-3">
@@ -85,7 +85,7 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
             <p class="text-[10px] text-gray-400 text-center">El precio total se recalculará automáticamente.</p>
         </div>
 
-        <!-- Opción 2: Editar Monto (Para variables/servicios) -->
+        <!-- Opción 2: Editar Monto (Para variables/servicios o retiros) -->
         <div id="edit-mode-monto" class="hidden space-y-2">
             <label class="block text-xs font-bold text-green-600 uppercase">Nuevo Valor Total</label>
             <input type="text" inputmode="numeric" id="edit-modal-monto" class="money-input block w-full px-4 py-3 border-2 border-green-100 rounded-xl text-2xl font-bold text-center text-gray-700 focus:border-green-500 outline-none">
@@ -116,7 +116,7 @@ input:focus, select:focus { background-color: #f0f9ff !important; border-color: 
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="text-xl font-black text-indigo-900 tracking-tight leading-none">EL CASTILLO<br><span class="text-indigo-600">DEL SABOR</span></h1>
-                <p class="text-[10px] text-gray-400 font-medium mt-0.5">v60 <span class="mx-1">•</span> <span id="fecha-actual"></span></p>
+                <p class="text-[10px] text-gray-400 font-medium mt-0.5">v62 <span class="mx-1">•</span> <span id="fecha-actual"></span></p>
             </div>
         </div>
         
@@ -378,10 +378,11 @@ const $ = id => document.getElementById(id);
 const fmtNum = n => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n||0);
 const cleanNum = str => {
     if(!str) return 0;
-    return Number(str.toString().replace(/[^0-9]/g, ''));
+    // Asegura que siempre se trabaje con un string antes de reemplazar
+    return Number(String(str).replace(/[^0-9]/g, ''));
 };
 const formatMoneyInput = (val) => {
-    if(val === '') return '';
+    if(val === '' || val === null || val === undefined) return ''; // Maneja valores nulos/vacíos
     const n = cleanNum(val);
     return new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP', minimumFractionDigits: 0}).format(n);
 }
@@ -418,6 +419,7 @@ async function init(){
                 colEmp=collection(db,`${path}/empleados`);
                 colCajaFuerte=collection(db,`${path}/caja_fuerte`);
                 
+                // *** MEJORA UX: Foco inicial en la búsqueda de gastos ***
                 setTimeout(() => { if(!$('gasto-search').value) $('gasto-search').focus(); }, 500);
                 setupSubs(isoDate);
             }
@@ -502,7 +504,9 @@ window.saveCierre=async()=>{
     if (dig > 0) {
         await setDoc(doc(colCajaFuerte, `auto_dig_${fechaHoy}`), { t: 'ingreso', d: `Cierre ${fechaHoy} (Digital)`, c: 'Venta', m: dig, h: new Date().toISOString(), digital: dig });
     }
-    const gananciaEfectivo = (ef - BASE) + tr;
+    const gananciaEfectivo = (ef - BASE) + tr; // Cambio aquí para seguir la lógica de arqueo
+    // Solo registrar si hay un movimiento de efectivo que afecte la caja fuerte (ganancia o pérdida que no sea solo base)
+    // Se asume que la base se mantiene en la caja diaria y solo la "ganancia" efectiva va a caja fuerte
     if (gananciaEfectivo !== 0) { 
          await setDoc(doc(colCajaFuerte, `auto_efec_${fechaHoy}`), { t: 'ingreso', d: `Cierre ${fechaHoy} (Efectivo)`, c: 'Venta', m: gananciaEfectivo, h: new Date().toISOString(), digital: 0 });
     }
@@ -512,17 +516,37 @@ window.saveCierre=async()=>{
 $('efectivo-final').oninput=()=>{ renderBitacora(); };
 $('pagos-digitales').oninput=()=>{ renderBitacora(); };
 
+// *** MEJORA UX: Tabulación con Enter en campos de cierre ***
+$('efectivo-final').addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        $('pagos-digitales').focus();
+    }
+});
+
+$('pagos-digitales').addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        $('save-cierre-btn').focus();
+    }
+});
+
+
 // LÓGICA CARRITO
 $('add-to-cart-btn').onclick = () => {
     const desc = $('gasto-desc').value;
     const cant = Number($('gasto-cantidad').value) || 1;
     const monto = cleanNum($('gasto-monto').value);
 
-    if (!desc || monto <= 0) return;
+    // Validar que haya descripción y monto positivo, o si es producto fijo, que la cantidad sea positiva
+    if (!desc || (monto <= 0 && (!selItem || selItem.tipo !== 'fijo')) || (selItem && selItem.tipo === 'fijo' && cant <= 0)) {
+        alert('Por favor, ingresa una descripción y un monto/cantidad válidos.'); // Pequeño feedback
+        return;
+    }
 
     const item = {
         id: Date.now() + '',
-        desc: desc + (cant > 1 ? ` (x${cant})` : ''), 
+        desc: desc, // La descripción original, el (xN) se añade en renderCart
         m: monto,
         cant: cant,
         h: new Date().toISOString()
@@ -534,10 +558,11 @@ $('add-to-cart-btn').onclick = () => {
     $('gasto-desc').value = '';
     $('gasto-monto').value = '';
     $('gasto-cantidad').classList.add('hidden');
+    $('gasto-cantidad').value = 1; // Resetear cantidad
     $('gasto-monto').readOnly = false;
     $('gasto-search').value = '';
     $('gasto-search').focus();
-    selItem = null;
+    selItem = null; // Limpiar selección de producto
 };
 
 function renderCart() {
@@ -545,14 +570,33 @@ function renderCart() {
     if (shoppingCart.length > 0) {
         cartContainer.classList.remove('hidden'); cartContainer.classList.add('has-items'); 
         let total = 0;
-        $('cart-items').innerHTML = shoppingCart.map((item, index) => { total += item.m; return `<div class="flex justify-between items-center border-b border-gray-200 py-1"><div class="flex gap-2 items-center flex-1 min-w-0"><span class="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded font-bold">x${item.cant}</span><span class="truncate font-medium text-gray-700">${item.desc.replace(/ \(x\d+\)/, '')}</span></div><span class="font-bold text-gray-900 mr-2 text-sm">${fmtNum(item.m)}</span><button onclick="removeFromCart(${index})" class="text-red-500 font-bold px-1 hover:bg-red-50 rounded">✕</button></div>`; }).join('');
+        $('cart-items').innerHTML = shoppingCart.map((item, index) => { 
+            total += item.m; 
+            const displayDesc = item.desc + (item.cant > 1 && selItem && selItem.tipo === 'fijo' ? ` (x${item.cant})` : '');
+            return `<div class="flex justify-between items-center border-b border-gray-200 py-1">
+                        <div class="flex gap-2 items-center flex-1 min-w-0">
+                            ${item.cant > 1 && selItem && selItem.tipo === 'fijo' ? `<span class="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded font-bold">x${item.cant}</span>` : ''}
+                            <span class="truncate font-medium text-gray-700">${displayDesc}</span>
+                        </div>
+                        <span class="font-bold text-gray-900 mr-2 text-sm">${fmtNum(item.m)}</span>
+                        <button onclick="removeFromCart(${index})" class="text-red-500 font-bold px-1 hover:bg-red-50 rounded">✕</button>
+                    </div>`; 
+        }).join('');
         $('cart-total').textContent = fmtNum(total);
-    } else { cartContainer.classList.add('hidden'); }
+    } else { cartContainer.classList.add('hidden'); cartContainer.classList.remove('has-items'); } // Quitar clase has-items
 }
 
 window.removeFromCart = (index) => { shoppingCart.splice(index, 1); renderCart(); };
-$('clear-cart-btn').onclick = () => { if(confirm('¿Borrar lista?')) { shoppingCart = []; renderCart(); } };
-$('commit-cart-btn').onclick = () => { if (shoppingCart.length === 0) return; shoppingCart.forEach(item => gastos.push(item)); shoppingCart = []; renderCart(); renderBitacora(); window.saveCierre(); };
+$('clear-cart-btn').onclick = () => { if(confirm('¿Borrar la lista de compra temporal?')) { shoppingCart = []; renderCart(); } };
+$('commit-cart-btn').onclick = () => { 
+    if (shoppingCart.length === 0) return; 
+    shoppingCart.forEach(item => {
+        // Asegurarse de que la descripción en el historial incluye la cantidad si aplica
+        const finalDesc = item.desc + (item.cant > 1 && item.tipo === 'fijo' ? ` (x${item.cant})` : '');
+        gastos.push({...item, desc: finalDesc}); // Clonar y asegurar desc final
+    }); 
+    shoppingCart = []; renderCart(); renderBitacora(); window.saveCierre(); 
+};
 $('gasto-monto').addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); $('add-to-cart-btn').click(); } });
 $('gasto-cantidad').addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); $('add-to-cart-btn').click(); } });
 $('retiro-monto').addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); addItem('r'); } });
@@ -580,10 +624,12 @@ window.editItem=(id,type)=>{
     $('edit-modal').style.display='flex';
     $('edit-modal').dataset.id = id;
     $('edit-modal').dataset.type = type;
-    $('edit-modal-desc').textContent = currentEditItem.desc;
+    // Mostrar la descripción sin el "(xN)" si es un item de cantidad para el modal de edición
+    $('edit-modal-desc').textContent = currentEditItem.desc.replace(/ \(x\d+\)/, ''); 
     
-    // Detectar si es producto fijo (tiene cantidad > 1 o se guardó cant)
-    const isQuantityItem = currentEditItem.cant && currentEditItem.cant > 0;
+    // Detectar si es un ítem de "cantidad" (productos fijos añadidos al carrito)
+    // Un retiro o un gasto variable no tendrá 'cant' o será 1 por defecto
+    const isQuantityItem = currentEditItem.cant && currentEditItem.cant > 1; 
     
     if(isQuantityItem) {
         // MODO CANTIDAD
@@ -610,12 +656,13 @@ $('edit-modal-save-btn').onclick=()=>{
         const newCant = Number($('edit-modal-cantidad').value);
         if(newCant > 0) {
             // Recalcular monto total (Unitario = Total Viejo / Cant Vieja)
-            const oldCant = currentEditItem.cant || 1;
+            // Asegurarse de que si currentEditItem.cant es 0 o undefined, se trate como 1 para evitar divisiones por cero.
+            const oldCant = currentEditItem.cant && currentEditItem.cant > 0 ? currentEditItem.cant : 1;
             const unitPrice = currentEditItem.m / oldCant;
             currentEditItem.m = unitPrice * newCant;
             currentEditItem.cant = newCant;
             // Actualizar texto descripcion (xN)
-            currentEditItem.desc = currentEditItem.desc.replace(/ \(x\d+\)/, '') + (newCant > 1 ? ` (x${newCant})` : '');
+            currentEditItem.desc = $('edit-modal-desc').textContent + (newCant > 1 ? ` (x${newCant})` : '');
         }
     } else {
         const newMonto = cleanNum($('edit-modal-monto').value);
@@ -632,7 +679,7 @@ $('edit-modal-close-x').onclick = () => $('edit-modal').style.display='none';
 
 
 function addActive(x) {
-    if (!x) return false;
+    if (!x || x.length === 0) return false; // Asegurar que haya elementos
     removeActive(x);
     if (currentFocus >= x.length) currentFocus = 0;
     if (currentFocus < 0) currentFocus = (x.length - 1);
@@ -654,6 +701,7 @@ gastoSearch.addEventListener('click', function(e) {
     else { res.classList.add('hidden'); }
 });
 
+// *** MEJORA UX: Buscador "Tiro al Blanco" - Seleccionar el primero al dar Enter ***
 gastoSearch.addEventListener("keydown", function(e) {
     let x = document.querySelectorAll("#search-results .search-item");
     if (e.key === "ArrowDown") { 
@@ -661,7 +709,14 @@ gastoSearch.addEventListener("keydown", function(e) {
         currentFocus++; addActive(x); 
     } 
     else if (e.key === "ArrowUp") { currentFocus--; addActive(x); } 
-    else if (e.key === "Enter") { e.preventDefault(); if (currentFocus > -1 && x && x[currentFocus]) x[currentFocus].click(); }
+    else if (e.key === "Enter") { 
+        e.preventDefault(); 
+        if (currentFocus === -1 && x.length > 0) { // Si no hay foco activo, pero hay resultados
+            x[0].click(); // Seleccionar el primer elemento
+        } else if (currentFocus > -1 && x && x[currentFocus]) {
+            x[currentFocus].click();
+        }
+    }
 });
 
 gastoSearch.oninput=(e)=>{
@@ -692,8 +747,13 @@ gastoSearch.oninput=(e)=>{
 
 $('gasto-cantidad').addEventListener('input', function() {
     if (selItem && selItem.tipo === 'fijo') {
-        const cant = Number(this.value); if(cant < 1) this.value = 1; 
-        $('gasto-monto').value = formatMoneyInput(Number(this.value) * selItem.precio);
+        const cant = Number(this.value); 
+        if(cant < 1 || isNaN(cant)) { 
+            this.value = 1; 
+            $('gasto-monto').value = formatMoneyInput(selItem.precio);
+        } else {
+            $('gasto-monto').value = formatMoneyInput(cant * selItem.precio);
+        }
     }
 });
 
@@ -733,14 +793,39 @@ window.fillProd=(id)=>{
     curProv=p.prov||[];renderProvList(); $('producto-form-title').textContent='Editar: '+p.nombre; $('delete-producto-btn').classList.remove('hidden'); document.querySelector('#productos-view').scrollIntoView();
 };
 
-window.delProd=async(id)=>{await deleteDoc(doc(colProd,id));$('clear-producto-form-btn').click();};
+window.delProd=async(id)=>{
+    if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+        await deleteDoc(doc(colProd,id));
+        $('clear-producto-form-btn').click();
+        if($('producto-save-message')) { $('producto-save-message').textContent="Producto eliminado"; setTimeout(()=>$('producto-save-message').textContent="",2000); }
+    }
+};
+$('delete-producto-btn').onclick = () => { // Asignar el handler al botón
+    const id = $('producto-id').value;
+    if (id) window.delProd(id);
+};
+
 $('save-producto-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('producto-nombre').value,tipo:$('producto-tipo').value,precio:cleanNum($('producto-precio').value),prov:curProv};const id=$('producto-id').value;if(id)await setDoc(doc(colProd,id),d,{merge:true});else await addDoc(colProd,d);$('clear-producto-form-btn').click();$('producto-save-message').textContent='Guardado';setTimeout(()=>$('producto-save-message').textContent='',2000);};
 $('add-proveedor-btn').onclick=()=>{curProv.push({n:$('prov-nom').value,t:$('prov-tel').value});renderProvList();$('prov-nom').value='';$('prov-tel').value='';};
-$('clear-producto-form-btn').onclick=()=>{ $('producto-form').reset(); $('producto-id').value=''; $('producto-form-title').textContent='Agregar Producto'; $('delete-producto-btn').classList.add('hidden'); curProv=[]; renderProvList(); };
+$('clear-producto-form-btn').onclick=()=>{ 
+    $('producto-form').reset(); 
+    $('producto-id').value=''; 
+    $('producto-form-title').textContent='Agregar Producto'; 
+    $('delete-producto-btn').classList.add('hidden'); 
+    curProv=[]; 
+    renderProvList(); 
+    if($('producto-save-message')) $('producto-save-message').textContent=''; // Limpiar mensaje al limpiar
+};
 function renderProvList(){$('proveedores-en-formulario-lista').innerHTML=curProv.map((p,i)=>`<div class="flex justify-between bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs items-center"><span><span class="font-bold">${p.n}</span> (${p.t})</span><button onclick="curProv.splice(${i},1);renderProvList()" class="text-red-400 font-bold px-2">✕</button></div>`).join('');}
-$('producto-tipo').onchange=(e)=>{if(e.target.value==='fijo')$('producto-precio-wrapper').classList.remove('hidden');else $('producto-precio-wrapper').classList.add('hidden');};
+$('producto-tipo').onchange=(e)=>{
+    // La visibilidad de producto-precio-wrapper ya no es necesaria, el input siempre existe.
+    // Solo se debe asegurar el formateo si el tipo es fijo
+    if(e.target.value==='fijo' && selItem) {
+        $('producto-precio').value = formatMoneyInput(selItem.precio);
+    }
+};
 
-$('save-empleado-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('empleado-nombre').value,sueldo:cleanNum($('empleado-sueldo').value)};const id=$('empleado-id').value;if(id)await setDoc(doc(colEmp,id),d,{merge:true});else await addDoc(colEmp,d);$('empleado-form').reset();};
+$('save-empleado-btn').onclick=async(e)=>{e.preventDefault();const d={nombre:$('empleado-nombre').value,sueldo:cleanNum($('empleado-sueldo').value)};const id=$('empleado-id').value;if(id)await setDoc(doc(colEmp,id),d,{merge:true});else await addDoc(colEmp,d);$('empleado-form').reset();$('empleado-save-message').textContent='Guardado';setTimeout(()=>$('empleado-save-message').textContent='',2000);};
 function renderEmp(){$('lista-empleados').innerHTML=localEmp.map(e=>`<div class="bg-white p-3 border border-gray-100 rounded-xl shadow-sm flex justify-between items-center"><div><span class="font-bold text-gray-800 block">${e.nombre}</span><span class="text-xs text-gray-500">Diario: ${fmtNum(e.sueldo)}</span></div><button onclick="$('empleado-id').value='${e.id}';$('empleado-nombre').value='${e.nombre}';$('empleado-sueldo').value=formatMoneyInput('${e.sueldo}');" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-medium text-sm">Editar</button></div>`).join('');}
 
 // CAJA FUERTE LOGICA
@@ -765,13 +850,24 @@ $('save-cf-mov-btn').onclick = async () => {
     if(!desc || monto <= 0) return;
     await addDoc(colCajaFuerte, { t: cfType, d: desc, c: cat, m: monto, h: new Date().toISOString(), digital: 0 });
     $('cf-desc').value = ''; $('cf-monto').value = '';
+    // Mensaje de guardado para Caja Fuerte
+    if($('save-cf-mov-btn')) { 
+        const originalText = $('save-cf-mov-btn').innerHTML;
+        $('save-cf-mov-btn').innerHTML = 'Movimiento Registrado ✅';
+        setTimeout(() => $('save-cf-mov-btn').innerHTML = originalText, 2000); 
+    }
 };
 
 function renderCajaFuerte() {
     let saldo = 0; let saldoDigital = 0;
     localCF.forEach(mov => {
-        if (mov.t === 'ingreso') { saldo += mov.m; if (mov.digital > 0) saldoDigital += mov.digital; } 
-        else { saldo -= mov.m; }
+        if (mov.t === 'ingreso') { 
+            saldo += mov.m; 
+            // Suma explícitamente el digital solo si está definido y es > 0
+            if (mov.digital && mov.digital > 0) saldoDigital += mov.digital; 
+        } else { 
+            saldo -= mov.m; 
+        }
     });
     if($('safe-balance')) $('safe-balance').textContent = fmtNum(saldo);
     if($('safe-digital')) $('safe-digital').textContent = fmtNum(saldoDigital);
@@ -814,6 +910,7 @@ $('query-rango-btn').onclick=async()=>{
         
         const wrapper = $('reporte-resultados-wrapper');
         if(wrapper) wrapper.classList.remove('hidden');
+        // *** MEJORA UX: Scroll a resultados del reporte ***
         document.querySelector('#resumenes-view').scrollTo({top: 500, behavior: 'smooth'});
     } catch(e) { console.error(e); }
 };
